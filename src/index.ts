@@ -1,17 +1,10 @@
 ﻿// @ts-nocheck
-// sync-bridge OpenCode/Claude plugin entry. It exports ONLY the plugin hook:
-// OpenCode runs EVERY export as a plugin hook and collects the results, so any
-// extra export (the library functions) would register as a bogus hook — and the
-// ones returning undefined / throwing make opencode's `resolvePluginProviders`
-// crash with "undefined is not an object (evaluating 'hook.auth')". The library
-// API (syncPlugins, sync, syncFile, registerSyncFile, homes…) is shipped as a
-// SEPARATE bundle, dist/lib.js (see src/lib.ts), for in-process consumers such
-// as plugin-updater — never imported through this hook entry.
+// sync-bridge plugin hook entry — exports ONLY the hook; library API lives in dist/lib.js (see lib.ts) since OpenCode runs every export as a hook.
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { syncFile, sync } from "./sync.js";
-import { getSyncConfig } from "./config.js";
+import { getSyncConfig, writeLog } from "./config.js";
 import { deployCommands, defineReadme, maybeRunReadmeCli } from "../core/src/index.js";
 import { SYNC_COMMANDS, maybeRunCli } from "./commands.js";
 import { claudeHome } from "./homes.js";
@@ -108,7 +101,7 @@ function isWithinDebounce(seconds) {
 }
 
 function markSynced() {
-  try { writeFileSync(lastsyncedPath(), String(Date.now()), "utf8"); } catch {}
+  try { writeFileSync(lastsyncedPath(), String(Date.now()), "utf8"); } catch (e) { writeLog(`markSynced failed: ${e}`, true); }
 }
 
 // sync every file from sync-bridge.json (`files: [{ name, strategy }]`, defaulting
@@ -131,7 +124,9 @@ export const SyncBridgePlugin = async function () {
   try {
     const cfg = getSyncConfig();
     if (cfg.enabled !== false && !isWithinDebounce(cfg.debounce_seconds)) syncAll();
-  } catch {}
+  } catch (e) {
+    writeLog(`sync-bridge plugin load sync failed: ${e}`, true);
+  }
   return {};
 };
 

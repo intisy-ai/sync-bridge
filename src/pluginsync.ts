@@ -1,10 +1,5 @@
 ﻿// @ts-nocheck
-// Cross-app plugin-list sync. Any plugins.json entry flagged `sync: true` is
-// mirrored into every other app home's plugins.json, so enabling a plugin in one
-// app installs it in the other too. Unlike the generic file sync (one merged blob
-// written to all homes), this is a PER-HOME union: each home keeps its own local
-// entries and only gains the shared (sync:true) ones it is missing. Additive —
-// it never removes an entry from any home.
+// Cross-app plugin-list sync: mirrors plugins.json entries flagged sync:true into every other home via per-home union (additive, never removes).
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from "fs";
 import { join, dirname } from "path";

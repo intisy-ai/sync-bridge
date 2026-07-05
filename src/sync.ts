@@ -6,12 +6,12 @@ import { join, dirname } from "path";
 import { randomBytes } from "crypto";
 import { existingHomes } from "./homes.js";
 import { STRATEGIES, newest } from "./merge.js";
-import { getSyncConfig } from "./config.js";
+import { getSyncConfig, writeLog } from "./config.js";
 
 const REGISTERED = new Map();   // relativePath -> options
 
 function readVersion(file) {
-  try { if (existsSync(file)) return { file, data: readFileSync(file, "utf8"), mtimeMs: statSync(file).mtimeMs }; } catch {}
+  try { if (existsSync(file)) return { file, data: readFileSync(file, "utf8"), mtimeMs: statSync(file).mtimeMs }; } catch (e) { writeLog(`readVersion failed for ${file}: ${e}`, true); }
   return null;
 }
 

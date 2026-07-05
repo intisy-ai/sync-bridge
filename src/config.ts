@@ -1,7 +1,5 @@
 ﻿// @ts-nocheck
-// sync-bridge config + logging. The config search is bespoke (it spans BOTH app
-// homes, Claude first, and carries a `files` array), so getSyncConfig stays local;
-// the log WRITING is delegated to the shared core library like every other plugin.
+// sync-bridge config: bespoke multi-home file search; log writing delegated to core's makeWriteLog.
 
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
