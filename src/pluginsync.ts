@@ -1,9 +1,9 @@
 ﻿// @ts-nocheck
 // Cross-app plugin-list sync: mirrors plugins.json entries flagged sync:true into every other home via per-home union (additive, never removes).
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from "fs";
-import { join, dirname } from "path";
-import { randomBytes } from "crypto";
+import { existsSync } from "fs";
+import { join } from "path";
+import { atomicWrite, readJson } from "../core/src/index.js";
 import { existingHomes } from "./homes.js";
 import { getSyncConfig } from "./config.js";
 
@@ -19,24 +19,12 @@ function pluginsFile(home) {
 
 // [] = genuinely absent/empty (safe to add into). null = the file exists but is
 // unreadable/unparseable — callers MUST skip that home so we never clobber real
-// local entries we just failed to read. Tolerates // line comments like the loader.
+// local entries we just failed to read. Tolerates // line comments (core's readJson).
 function readEntries(file) {
   if (!existsSync(file)) return [];
-  try {
-    const raw = readFileSync(file, "utf8").replace(/^\s*\/\/[^\n]*/gm, "");
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return null;
-  }
-}
-
-function atomicWrite(file, content) {
-  const dir = dirname(file);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  const tmp = file + "." + randomBytes(6).toString("hex") + ".tmp";
-  writeFileSync(tmp, content, "utf8");
-  renameSync(tmp, file);
+  const parsed = readJson(file, null);
+  if (parsed === null) return null;
+  return Array.isArray(parsed) ? parsed : [];
 }
 
 // Reconcile plugins.json across all existing homes: collect every entry marked

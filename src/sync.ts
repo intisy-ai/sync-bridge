@@ -1,9 +1,9 @@
 ﻿// @ts-nocheck
 // The sync engine: reconcile a relative path across every existing app home via the chosen merge strategy (atomic temp-rename, skipping homes already up to date).
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync, renameSync } from "fs";
-import { join, dirname } from "path";
-import { randomBytes } from "crypto";
+import { existsSync, readFileSync, statSync } from "fs";
+import { join } from "path";
+import { atomicWrite } from "../core/src/index.js";
 import { existingHomes } from "./homes.js";
 import { STRATEGIES, newest } from "./merge.js";
 import { getSyncConfig, writeLog } from "./config.js";
@@ -13,14 +13,6 @@ const REGISTERED = new Map();   // relativePath -> options
 function readVersion(file) {
   try { if (existsSync(file)) return { file, data: readFileSync(file, "utf8"), mtimeMs: statSync(file).mtimeMs }; } catch (e) { writeLog(`readVersion failed for ${file}: ${e}`, true); }
   return null;
-}
-
-function atomicWrite(file, content) {
-  const dir = dirname(file);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  const tmp = file + "." + randomBytes(6).toString("hex") + ".tmp";
-  writeFileSync(tmp, content, "utf8");
-  renameSync(tmp, file);
 }
 
 // resolve a bare file name to where it lives in a home: config/<name> (preferred)
