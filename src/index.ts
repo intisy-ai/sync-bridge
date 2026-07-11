@@ -130,4 +130,12 @@ export const SyncBridgePlugin = async function () {
   return {};
 };
 
+// Under Claude Code the plugin-updater is the runtime and it invokes activate()
+// after each deploy — without this export the bundle was merely imported and the
+// reconcile NEVER ran under claude. opencode also calls this (it runs every
+// export as a hook); the debounce makes that second invocation a no-op.
+export async function activate() {
+  return SyncBridgePlugin();
+}
+
 export default SyncBridgePlugin;
