@@ -1,5 +1,5 @@
 ﻿// @ts-nocheck
-// Cross-app plugin-list sync: mirrors plugins.json entries flagged sync:true into every other home via per-home union (additive, never removes).
+// Cross-app plugin-list sync: mirrors every plugins.json entry into every other home via per-home union (additive, never removes). An entry opts out with sync:false, or via the exclude list.
 
 import { existsSync } from "fs";
 import { join } from "path";
@@ -31,7 +31,9 @@ function readEntries(file) {
 // sync:true, then add any a home is missing (matched by name). Returns a summary
 // { synced, homes, added: { <home>: [names] } }.
 export function syncPlugins() {
-  if (getSyncConfig().sync_plugins === false) return { synced: false, reason: "sync_plugins disabled", homes: 0, added: {} };
+  const cfg = getSyncConfig();
+  if (cfg.sync_plugins === false) return { synced: false, reason: "sync_plugins disabled", homes: 0, added: {} };
+  const exclude = new Set(Array.isArray(cfg.exclude) ? cfg.exclude : []);
 
   const homes = existingHomes();
   if (homes.length < 2) return { synced: false, reason: "fewer than two app homes", homes: homes.length, added: {} };
@@ -45,7 +47,7 @@ export function syncPlugins() {
   for (const entries of perHome) {
     if (!entries) continue; // unreadable home contributes nothing to the shared pool
     for (const entry of entries) {
-      if (entry && entry.sync === true && entry.name) shared.set(entry.name, entry);
+      if (entry && entry.sync !== false && entry.name && !exclude.has(entry.name)) shared.set(entry.name, entry);
     }
   }
   if (shared.size === 0) return { synced: true, homes: homes.length, added: {} };

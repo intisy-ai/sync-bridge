@@ -19,6 +19,8 @@ defineConfig(NAME, {
   files: DEFAULT_FILES,
   enabled: true,
   sync_plugins: true,
+  categories: { accounts: true, plugins: true, settings: true, pluginConfigs: true },
+  exclude: [],
   default_strategy: "newest",
   debounce_seconds: 0,
 });

@@ -3,11 +3,11 @@
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
-import { syncFile, sync } from "./sync.js";
 import { getSyncConfig, writeLog } from "./config.js";
 import { deployCommands, defineReadme, maybeRunReadmeCli } from "../core/src/index.js";
 import { SYNC_COMMANDS, maybeRunCli } from "./commands.js";
 import { claudeHome } from "./homes.js";
+import { syncAll as runSyncAll } from "./run.js";
 
 defineReadme({
   description:
@@ -104,17 +104,10 @@ function markSynced() {
   try { writeFileSync(lastsyncedPath(), String(Date.now()), "utf8"); } catch (e) { writeLog(`markSynced failed: ${e}`, true); }
 }
 
-// sync every file from sync-bridge.json (`files: [{ name, strategy }]`, defaulting
-// to the core-auth account store), plus any library-registered files.
+// reconcile the broadened default set (accounts + settings + per-plugin configs +
+// explicit/registered files) plus the cross-app plugin list, then stamp the debounce.
 function syncAll() {
-  const cfg = getSyncConfig();
-  const defaultStrategy = cfg.default_strategy || "newest";
-  const results = {};
-  for (const entry of cfg.files || []) {
-    const name = entry && (entry.name || entry.path);
-    if (name) results[name] = syncFile(name, { strategy: entry.strategy || defaultStrategy });
-  }
-  Object.assign(results, sync());
+  const results = runSyncAll();
   markSynced();
   return results;
 }

@@ -1,10 +1,17 @@
 // @ts-nocheck
-// Merge strategies for synced files: a strategy takes per-home versions ([{ data, mtimeMs }]) and returns the reconciled text. "newest" is the default; "accounts" unions the core-auth store so a login in either app is never lost.
+// Merge strategies for synced files: a strategy takes per-home versions ([{ data, mtimeMs }]) and returns the reconciled text. "newest" is the default; "accounts" unions the core-auth store so a login in either app is never lost; "newest-safe" is newest with secret keys scrubbed for settings/config files.
+
+import { scrubText } from "./secrets.js";
 
 export function newest(versions) {
   let best = null;
   for (const version of versions) if (!best || version.mtimeMs > best.mtimeMs) best = version;
   return best ? best.data : null;
+}
+
+export function newestSafe(versions) {
+  const best = newest(versions);
+  return best == null ? null : scrubText(best);
 }
 
 function parse(text) {
@@ -42,4 +49,4 @@ export function accounts(versions) {
   return JSON.stringify(out, null, 2);
 }
 
-export const STRATEGIES = { newest, accounts };
+export const STRATEGIES = { newest, accounts, "newest-safe": newestSafe };
