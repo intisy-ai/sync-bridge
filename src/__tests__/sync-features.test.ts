@@ -5,13 +5,15 @@ import { join } from "path";
 import { accounts } from "../merge.js";
 import { existingHomes } from "../homes.js";
 import { syncFile } from "../sync.js";
+import { syncAll } from "../run.js";
 import { syncPlugins } from "../pluginsync.js";
+import { drainHomes } from "../../core/src/index.js";
 
 function tmp(prefix: string): string {
   return mkdtempSync(join(tmpdir(), prefix));
 }
 
-const ENV_KEYS = ["HUB_CLAUDE_DIR", "HUB_OPENCODE_DIR", "HUB_APPS_FILE", "XDG_CONFIG_HOME"];
+const ENV_KEYS = ["HUB_CLAUDE_DIR", "HUB_OPENCODE_DIR", "HUB_APPS_FILE", "HUB_CONFIG_DIR", "XDG_CONFIG_HOME"];
 const saved: Record<string, string | undefined> = {};
 
 afterEach(() => {
@@ -25,7 +27,9 @@ function stashEnv(): void {
   for (const k of ENV_KEYS) saved[k] = process.env[k];
 }
 
-// Two existing built-in homes with a config/ dir each, and no apps.json.
+// Two existing built-in homes with a config/ dir each. HUB_APPS_FILE points at a
+// missing file so the registry yields only the two built-ins (never the real
+// ~/.config/cairn/apps.json), keeping the home set deterministic and isolated.
 function twoHomes(): { claude: string; opencode: string } {
   stashEnv();
   const claude = tmp("sb-c-");
@@ -34,7 +38,8 @@ function twoHomes(): { claude: string; opencode: string } {
   mkdirSync(join(opencode, "config"), { recursive: true });
   process.env.HUB_CLAUDE_DIR = claude;
   process.env.HUB_OPENCODE_DIR = opencode;
-  delete process.env.HUB_APPS_FILE;
+  process.env.HUB_APPS_FILE = join(tmp("sb-noapps-"), "none.json");
+  process.env.HUB_CONFIG_DIR = opencode; // where bus events land for these tests
   return { claude, opencode };
 }
 
@@ -80,6 +85,30 @@ describe("reconcile", () => {
     syncFile("config/settings.json", { strategy: "newest", create: true });
     expect(JSON.parse(readFileSync(join(opencode, "config", "settings.json"), "utf8")))
       .toEqual({ logConsole: true });
+  });
+});
+
+describe("bus events", () => {
+  it("emits config.changed when a file is reconciled", () => {
+    const { claude, opencode } = twoHomes();
+    writeFileSync(join(claude, "config", "settings.json"), JSON.stringify({ logConsole: true }));
+    syncFile("config/settings.json", { strategy: "newest", create: true });
+
+    const events: { topic: string; payload: { name?: string } }[] = [];
+    drainHomes([claude, opencode], "bus-c", (e: typeof events[number]) => events.push(e));
+    expect(events.some((e) => e.topic === "config.changed" && e.payload.name === "config/settings.json")).toBe(true);
+  });
+
+  it("emits sync.completed summarizing a pass that changed something", () => {
+    const { claude, opencode } = twoHomes();
+    writeFileSync(join(claude, "config", "settings.json"), JSON.stringify({ logConsole: true }));
+    syncAll();
+
+    const events: { topic: string; payload: { files?: string[] } }[] = [];
+    drainHomes([claude, opencode], "bus-s", (e: typeof events[number]) => events.push(e));
+    const done = events.find((e) => e.topic === "sync.completed");
+    expect(done).toBeTruthy();
+    expect(done!.payload.files).toContain("config/settings.json");
   });
 });
 
@@ -139,7 +168,7 @@ describe("plugin sync all-by-default", () => {
     writeFileSync(join(opencode, "config", "plugins.json"), JSON.stringify([]));
     process.env.HUB_CLAUDE_DIR = claude;
     process.env.HUB_OPENCODE_DIR = opencode;
-    delete process.env.HUB_APPS_FILE;
+    process.env.HUB_APPS_FILE = join(tmp("sb-noapps-"), "none.json");
 
     const result = syncPlugins();
     expect(result.synced).toBe(true);

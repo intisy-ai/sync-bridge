@@ -4,6 +4,7 @@
 
 import { existsSync, readdirSync } from "fs";
 import { join } from "path";
+import { publish, TOPICS } from "../core/src/index.js";
 import { existingHomes } from "./homes.js";
 import { getSyncConfig } from "./config.js";
 import { syncFile, sync as syncRegistered } from "./sync.js";
@@ -55,6 +56,14 @@ export function syncAll() {
   Object.assign(results, syncRegistered());
 
   const plugins = cats.plugins !== false ? syncPlugins() : null;
+
+  const changedFiles = Object.keys(results).filter((name) => results[name] && results[name].wrote > 0);
+  const addedPlugins = plugins && plugins.added
+    ? [...new Set(Object.values(plugins.added).flat())]
+    : [];
+  if (changedFiles.length > 0 || addedPlugins.length > 0) {
+    publish(TOPICS.syncCompleted, { files: changedFiles, plugins: addedPlugins, homes: existingHomes() }, "sync-bridge");
+  }
   return { enabled: true, files: results, plugins };
 }
 

@@ -3,7 +3,7 @@
 
 import { existsSync, readFileSync, statSync } from "fs";
 import { join } from "path";
-import { atomicWrite } from "../core/src/index.js";
+import { atomicWrite, publish, TOPICS } from "../core/src/index.js";
 import { existingHomes } from "./homes.js";
 import { STRATEGIES, newest } from "./merge.js";
 import { getSyncConfig, writeLog } from "./config.js";
@@ -54,6 +54,7 @@ export function syncFile(name, options) {
     if (!state.present && !opts.create) continue;   // absent and not propagating: leave it
     if (!state.readable || state.data !== merged) { atomicWrite(state.file, merged); wrote++; }
   }
+  if (wrote > 0) publish(TOPICS.configChanged, { name }, "sync-bridge");
   return { synced: true, homes: homes.length, wrote };
 }
 

@@ -4,9 +4,8 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { getSyncConfig, writeLog } from "./config.js";
-import { deployCommands, defineReadme, maybeRunReadmeCli } from "../core/src/index.js";
+import { deployCommands, defineReadme, maybeRunReadmeCli, getAppConfigDir } from "../core/src/index.js";
 import { SYNC_COMMANDS, maybeRunCli } from "./commands.js";
-import { claudeHome } from "./homes.js";
 import { syncAll as runSyncAll } from "./run.js";
 
 defineReadme({
@@ -81,10 +80,10 @@ try {
   /* best-effort */
 }
 
-// Path for the debounce timestamp; stored in the Claude config dir (always present
-// as the primary home) so it persists across runs without requiring both apps.
+// Path for the debounce timestamp; stored in the running app's own config dir so
+// it persists across runs without assuming any particular app is installed.
 function lastsyncedPath() {
-  const dir = join(claudeHome(), "config");
+  const dir = join(getAppConfigDir(), "config");
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   return join(dir, "sync-bridge.lastsynced");
 }

@@ -7,4 +7,4 @@
 export { syncFile, registerSyncFile, sync, registeredFiles } from "./sync.js";
 export { syncPlugins } from "./pluginsync.js";
 export { syncAll, syncStatus } from "./run.js";
-export { claudeHome, opencodeHome, existingHomes, allHomes } from "./homes.js";
+export { existingHomes, allHomes } from "./homes.js";
