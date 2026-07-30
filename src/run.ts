@@ -36,15 +36,15 @@ export function syncAll() {
   const results = {};
 
   if (cats.accounts !== false && !exclude.has("accounts.json")) {
-    results["accounts.json"] = syncFile("accounts.json", { strategy: "accounts" });
+    results["accounts.json"] = syncFile("accounts.json", { strategy: "accounts", create: true });
   }
   if (cats.settings !== false && !exclude.has("settings.json")) {
-    results["config/settings.json"] = syncFile("config/settings.json", { strategy: "newest-safe" });
+    results["config/settings.json"] = syncFile("config/settings.json", { strategy: "newest", create: true });
   }
   if (cats.pluginConfigs !== false) {
     for (const name of discoverPluginConfigs()) {
       if (exclude.has(name)) continue;
-      results["config/" + name] = syncFile("config/" + name, { strategy: "newest-safe" });
+      results["config/" + name] = syncFile("config/" + name, { strategy: "newest" });
     }
   }
   // explicit per-config overrides from sync-bridge.json, plus library-registered files.

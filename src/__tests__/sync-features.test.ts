@@ -1,10 +1,10 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from "fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, statSync, utimesSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { scrubSecrets, scrubText } from "../secrets.js";
-import { newestSafe } from "../merge.js";
+import { accounts } from "../merge.js";
 import { existingHomes } from "../homes.js";
+import { syncFile } from "../sync.js";
 import { syncPlugins } from "../pluginsync.js";
 
 function tmp(prefix: string): string {
@@ -25,24 +25,71 @@ function stashEnv(): void {
   for (const k of ENV_KEYS) saved[k] = process.env[k];
 }
 
-describe("secret scrubbing", () => {
-  it("drops secret-looking keys at any depth, keeps safe keys", () => {
-    const out = scrubSecrets({ theme: "dark", apiKey: "sk-1", nested: { token: "t", label: "ok" }, list: [{ password: "p", n: 1 }] });
-    expect(out).toEqual({ theme: "dark", nested: { label: "ok" }, list: [{ n: 1 }] });
+// Two existing built-in homes with a config/ dir each, and no apps.json.
+function twoHomes(): { claude: string; opencode: string } {
+  stashEnv();
+  const claude = tmp("sb-c-");
+  const opencode = tmp("sb-o-");
+  mkdirSync(join(claude, "config"), { recursive: true });
+  mkdirSync(join(opencode, "config"), { recursive: true });
+  process.env.HUB_CLAUDE_DIR = claude;
+  process.env.HUB_OPENCODE_DIR = opencode;
+  delete process.env.HUB_APPS_FILE;
+  return { claude, opencode };
+}
+
+describe("reconcile", () => {
+  it("reconciles the newest version across homes and preserves every key", () => {
+    const { claude, opencode } = twoHomes();
+    writeFileSync(join(claude, "config", "foo.json"), JSON.stringify({ max_tokens: 100, theme: "light" }));
+    const newerPath = join(opencode, "config", "foo.json");
+    writeFileSync(newerPath, JSON.stringify({ max_tokens: 200, theme: "dark", apiToken: "keep-me" }));
+    const future = Date.now() / 1000 + 100;
+    utimesSync(newerPath, future, future);
+
+    const res = syncFile("config/foo.json", { strategy: "newest" });
+    expect(res.synced).toBe(true);
+    // The newer version wins on both homes, and secret-named keys are NOT stripped.
+    expect(JSON.parse(readFileSync(join(claude, "config", "foo.json"), "utf8")))
+      .toEqual({ max_tokens: 200, theme: "dark", apiToken: "keep-me" });
   });
 
-  it("scrubText round-trips JSON and drops secrets", () => {
-    const text = JSON.stringify({ logConsole: true, accessToken: "x" });
-    const scrubbed = JSON.parse(scrubText(text));
-    expect(scrubbed).toEqual({ logConsole: true });
+  it("never overwrites a present-but-unreadable file", () => {
+    const { claude, opencode } = twoHomes();
+    writeFileSync(join(claude, "config", "foo.json"), JSON.stringify({ a: 1 }));
+    // A directory at the target path exists but cannot be read as a file.
+    mkdirSync(join(opencode, "config", "foo.json"), { recursive: true });
+
+    const res = syncFile("config/foo.json", { strategy: "newest", create: true });
+    expect(res.synced).toBe(true);
+    expect(statSync(join(opencode, "config", "foo.json")).isDirectory()).toBe(true);
   });
 
-  it("newest-safe returns the newest version scrubbed", () => {
-    const result = newestSafe([
-      { data: JSON.stringify({ a: 1, secret: "old" }), mtimeMs: 1 },
-      { data: JSON.stringify({ a: 2, secret: "new" }), mtimeMs: 2 },
-    ]);
-    expect(JSON.parse(result)).toEqual({ a: 2 });
+  it("does not create a reconciled file in a home that lacks it when create is off", () => {
+    const { claude, opencode } = twoHomes();
+    writeFileSync(join(claude, "config", "plug.json"), JSON.stringify({ a: 1 }));
+
+    syncFile("config/plug.json", { strategy: "newest" });
+    expect(existsSync(join(opencode, "config", "plug.json"))).toBe(false);
+  });
+
+  it("propagates a file into a home that lacks it when create is on", () => {
+    const { claude, opencode } = twoHomes();
+    writeFileSync(join(claude, "config", "settings.json"), JSON.stringify({ logConsole: true }));
+
+    syncFile("config/settings.json", { strategy: "newest", create: true });
+    expect(JSON.parse(readFileSync(join(opencode, "config", "settings.json"), "utf8")))
+      .toEqual({ logConsole: true });
+  });
+});
+
+describe("accounts strategy", () => {
+  it("unions accounts and clamps a stale activeIndex into the merged list", () => {
+    const a = JSON.stringify({ version: 1, providers: { p: { accounts: [{ id: "x" }], activeIndex: 0 } } });
+    const b = JSON.stringify({ version: 1, providers: { p: { accounts: [{ id: "y" }], activeIndex: 5 } } });
+    const merged = JSON.parse(accounts([{ data: a, mtimeMs: 1 }, { data: b, mtimeMs: 2 }]));
+    expect(merged.providers.p.accounts.map((acc: { id: string }) => acc.id).sort()).toEqual(["x", "y"]);
+    expect(merged.providers.p.activeIndex).toBe(1);
   });
 });
 

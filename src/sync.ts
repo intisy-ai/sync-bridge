@@ -10,9 +10,16 @@ import { getSyncConfig, writeLog } from "./config.js";
 
 const REGISTERED = new Map();   // relativePath -> options
 
-function readVersion(file) {
-  try { if (existsSync(file)) return { file, data: readFileSync(file, "utf8"), mtimeMs: statSync(file).mtimeMs }; } catch (e) { writeLog(`readVersion failed for ${file}: ${e}`, true); }
-  return null;
+// A home's view of the file. `present` distinguishes "absent" (safe to create)
+// from "exists but unreadable" (locked or corrupt: must never be overwritten).
+function readState(file) {
+  if (!existsSync(file)) return { file, present: false, readable: false };
+  try {
+    return { file, present: true, readable: true, data: readFileSync(file, "utf8"), mtimeMs: statSync(file).mtimeMs };
+  } catch (e) {
+    writeLog(`read failed for ${file}: ${e}`, true);
+    return { file, present: true, readable: false };
+  }
 }
 
 // resolve a bare file name to where it lives in a home: config/<name> (preferred)
@@ -27,20 +34,25 @@ function resolvePath(home, name) {
   return preferred;
 }
 
+// options.create: also write the merged text into homes that lack the file. Off
+// by default so a plugin's config never lands in an app that doesn't have it; the
+// app-level files (accounts, settings) opt in to propagate to every home.
 export function syncFile(name, options) {
+  const opts = options || {};
   const defaultStrategy = getSyncConfig().default_strategy || "newest";
-  const strategy = STRATEGIES[(options && options.strategy) || defaultStrategy] || newest;
+  const strategy = STRATEGIES[opts.strategy || defaultStrategy] || newest;
   const homes = existingHomes();
   if (homes.length < 2) return { synced: false, reason: "fewer than two app homes", homes: homes.length, wrote: 0 };
-  const files = homes.map((home) => resolvePath(home, name));
-  const versions = files.map(readVersion).filter(Boolean);
+  const states = homes.map((home) => readState(resolvePath(home, name)));
+  const versions = states.filter((s) => s.readable).map((s) => ({ data: s.data, mtimeMs: s.mtimeMs }));
   if (versions.length === 0) return { synced: false, reason: "no versions on any home", homes: homes.length, wrote: 0 };
   const merged = strategy(versions);
   if (merged == null) return { synced: false, reason: "strategy produced nothing", homes: homes.length, wrote: 0 };
   let wrote = 0;
-  for (const file of files) {
-    const current = readVersion(file);
-    if (!current || current.data !== merged) { atomicWrite(file, merged); wrote++; }
+  for (const state of states) {
+    if (state.present && !state.readable) continue; // locked or corrupt: never clobber
+    if (!state.present && !opts.create) continue;   // absent and not propagating: leave it
+    if (!state.readable || state.data !== merged) { atomicWrite(state.file, merged); wrote++; }
   }
   return { synced: true, homes: homes.length, wrote };
 }

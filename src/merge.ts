@@ -1,17 +1,10 @@
 // @ts-nocheck
-// Merge strategies for synced files: a strategy takes per-home versions ([{ data, mtimeMs }]) and returns the reconciled text. "newest" is the default; "accounts" unions the core-auth store so a login in either app is never lost; "newest-safe" is newest with secret keys scrubbed for settings/config files.
-
-import { scrubText } from "./secrets.js";
+// Merge strategies for synced files: a strategy takes per-home versions ([{ data, mtimeMs }]) and returns the reconciled text. "newest" is the default; "accounts" unions the core-auth store so a login in either app is never lost.
 
 export function newest(versions) {
   let best = null;
   for (const version of versions) if (!best || version.mtimeMs > best.mtimeMs) best = version;
   return best ? best.data : null;
-}
-
-export function newestSafe(versions) {
-  const best = newest(versions);
-  return best == null ? null : scrubText(best);
 }
 
 function parse(text) {
@@ -46,7 +39,17 @@ export function accounts(versions) {
       target.activeIndexByLane = { ...target.activeIndexByLane, ...(pool.activeIndexByLane || {}) };
     }
   }
+  // A pool's activeIndex was chosen against its own account list; after the union
+  // the list is longer, so clamp every index into range or it can select a wrong
+  // or nonexistent account.
+  for (const pool of Object.values(out.providers)) {
+    const last = pool.accounts.length - 1;
+    pool.activeIndex = Math.min(Math.max(pool.activeIndex || 0, 0), Math.max(last, 0));
+    for (const [lane, index] of Object.entries(pool.activeIndexByLane)) {
+      pool.activeIndexByLane[lane] = Math.min(Math.max(index || 0, 0), Math.max(last, 0));
+    }
+  }
   return JSON.stringify(out, null, 2);
 }
 
-export const STRATEGIES = { newest, accounts, "newest-safe": newestSafe };
+export const STRATEGIES = { newest, accounts };
