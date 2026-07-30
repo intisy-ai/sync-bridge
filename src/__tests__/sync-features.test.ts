@@ -7,6 +7,7 @@ import { existingHomes } from "../homes.js";
 import { syncFile } from "../sync.js";
 import { syncAll } from "../run.js";
 import { syncPlugins } from "../pluginsync.js";
+import { withSyncLock } from "../lock.js";
 import { drainHomes } from "../../core/src/index.js";
 
 function tmp(prefix: string): string {
@@ -109,6 +110,32 @@ describe("bus events", () => {
     const done = events.find((e) => e.topic === "sync.completed");
     expect(done).toBeTruthy();
     expect(done!.payload.files).toContain("config/settings.json");
+  });
+});
+
+describe("sync lock", () => {
+  it("runs the body while holding the lock, then releases it", () => {
+    twoHomes();
+    expect(withSyncLock(() => 42)).toBe(42);
+    expect(withSyncLock(() => 7)).toBe(7);
+  });
+
+  it("skips the body when a fresh lock is already held", () => {
+    const { opencode } = twoHomes();
+    writeFileSync(join(opencode, "config", "sync-bridge.lock"), "");
+    let ran = false;
+    const result = withSyncLock(() => { ran = true; return 1; });
+    expect(ran).toBe(false);
+    expect(result).toBeNull();
+  });
+
+  it("takes over a stale lock", () => {
+    const { opencode } = twoHomes();
+    const lock = join(opencode, "config", "sync-bridge.lock");
+    writeFileSync(lock, "");
+    const old = Date.now() / 1000 - 120;
+    utimesSync(lock, old, old);
+    expect(withSyncLock(() => "took over")).toBe("took over");
   });
 });
 

@@ -9,6 +9,7 @@ import { existingHomes } from "./homes.js";
 import { getSyncConfig } from "./config.js";
 import { syncFile, sync as syncRegistered } from "./sync.js";
 import { syncPlugins } from "./pluginsync.js";
+import { withSyncLock } from "./lock.js";
 import { FILE_DENYLIST } from "./secrets.js";
 
 // every config/<name>.json present in any home, minus secret-store, control, and
@@ -31,6 +32,10 @@ function discoverPluginConfigs() {
 export function syncAll() {
   const cfg = getSyncConfig();
   if (cfg.enabled === false) return { enabled: false, files: {}, plugins: null };
+  return withSyncLock(() => runPass(cfg)) ?? { enabled: true, skipped: "locked", files: {}, plugins: null };
+}
+
+function runPass(cfg) {
   const cats = cfg.categories || {};
   const exclude = new Set(Array.isArray(cfg.exclude) ? cfg.exclude : []);
   const defaultStrategy = cfg.default_strategy || "newest";
