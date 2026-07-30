@@ -91,6 +91,13 @@ Config file: `<configDir>/config/sync-bridge.json` (edit via the loader or `/syn
   ],
   "enabled": true,
   "sync_plugins": true,
+  "categories": {
+    "accounts": true,
+    "plugins": true,
+    "settings": true,
+    "pluginConfigs": true
+  },
+  "exclude": [],
   "default_strategy": "newest",
   "debounce_seconds": 0
 }
@@ -102,6 +109,8 @@ Config file: `<configDir>/config/sync-bridge.json` (edit via the loader or `/syn
 | `files` | `[{"name":"accounts.json","strategy":"accounts"}]` |
 | `enabled` | `true` |
 | `sync_plugins` | `true` |
+| `categories` | `{"accounts":true,"plugins":true,"settings":true,"pluginConfigs":true}` |
+| `exclude` | `[]` |
 | `default_strategy` | `"newest"` |
 | `debounce_seconds` | `0` |
 

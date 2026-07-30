@@ -4,7 +4,7 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { existingHomes } from "./homes.js";
-import { makeWriteLog, defineConfig } from "../core/src/index.js";
+import { makeWriteLog, defineConfig, defineCapabilities } from "../core/src/index.js";
 
 const NAME = "sync-bridge";
 
@@ -23,6 +23,22 @@ defineConfig(NAME, {
   exclude: [],
   default_strategy: "newest",
   debounce_seconds: 0,
+});
+
+defineCapabilities(NAME, {
+  fields: [
+    { key: "logging", type: "boolean", label: "Logging", group: "General" },
+    { key: "enabled", type: "boolean", label: "Sync enabled", description: "Master switch for cross-app sync.", group: "General" },
+    { key: "sync_plugins", type: "boolean", label: "Sync plugins", group: "General" },
+    { key: "categories.accounts", type: "boolean", label: "Accounts", group: "Categories" },
+    { key: "categories.plugins", type: "boolean", label: "Plugins", group: "Categories" },
+    { key: "categories.settings", type: "boolean", label: "Global settings", group: "Categories" },
+    { key: "categories.pluginConfigs", type: "boolean", label: "Plugin configs", group: "Categories" },
+    { key: "default_strategy", type: "string", label: "Default merge strategy", group: "Advanced" },
+    { key: "debounce_seconds", type: "number", label: "Debounce (s)", min: 0, group: "Advanced" },
+    { key: "exclude", type: "list", itemType: "string", label: "Exclude files", group: "Advanced" },
+    { key: "files", type: "multiline", label: "Synced files", description: "JSON array of { name, strategy } entries.", group: "Advanced" },
+  ],
 });
 
 let SYNC_CONFIG = null;
