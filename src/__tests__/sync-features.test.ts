@@ -8,7 +8,7 @@ import { syncFile } from "../sync.js";
 import { syncAll } from "../run.js";
 import { syncPlugins } from "../pluginsync.js";
 import { withSyncLock } from "../lock.js";
-import { drainHomes } from "../../core/src/index.js";
+import { drainHomes, readActivity } from "../../core/src/index.js";
 
 function tmp(prefix: string): string {
   return mkdtempSync(join(tmpdir(), prefix));
@@ -100,16 +100,30 @@ describe("bus events", () => {
     expect(events.some((e) => e.topic === "config.changed" && e.payload.name === "config/settings.json")).toBe(true);
   });
 
-  it("emits sync.completed summarizing a pass that changed something", () => {
-    const { claude, opencode } = twoHomes();
-    writeFileSync(join(claude, "config", "settings.json"), JSON.stringify({ logConsole: true }));
+  it("emits a sync_completed activity summarizing a pass that changed something", () => {
+    // Registered via explicit apps.json entries (like "registry-aware homes" below),
+    // not twoHomes()'s HUB_CLAUDE_DIR/HUB_OPENCODE_DIR envOverride pair, since those
+    // ids carry no built-in registry fallback of their own.
+    stashEnv();
+    const a = tmp("sb-reg-a-");
+    const b = tmp("sb-reg-b-");
+    mkdirSync(join(a, "config"), { recursive: true });
+    mkdirSync(join(b, "config"), { recursive: true });
+    const appsDir = tmp("sb-reg-apps-");
+    writeFileSync(join(appsDir, "apps.json"), JSON.stringify({
+      "home-a": { id: "home-a", label: "Home A", home: { candidates: [a] } },
+      "home-b": { id: "home-b", label: "Home B", home: { candidates: [b] } },
+    }));
+    process.env.HUB_APPS_FILE = join(appsDir, "apps.json");
+    process.env.HUB_CONFIG_DIR = a;
+
+    writeFileSync(join(a, "config", "settings.json"), JSON.stringify({ logConsole: true }));
     syncAll();
 
-    const events: { topic: string; payload: { files?: string[] } }[] = [];
-    drainHomes([claude, opencode], "bus-s", (e: typeof events[number]) => events.push(e));
-    const done = events.find((e) => e.topic === "sync.completed");
+    const { records } = readActivity([a, b], { topics: ["sync.completed"] });
+    const done = records.find((r) => r.action === "sync_completed");
     expect(done).toBeTruthy();
-    expect(done!.payload.files).toContain("config/settings.json");
+    expect(done!.details.files).toContain("config/settings.json");
   });
 });
 

@@ -4,7 +4,7 @@
 
 import { existsSync, readdirSync } from "fs";
 import { join } from "path";
-import { publish, TOPICS } from "../core/src/index.js";
+import { emitEvent, TOPICS } from "../core/src/index.js";
 import { existingHomes } from "./homes.js";
 import { getSyncConfig } from "./config.js";
 import { syncFile, sync as syncRegistered } from "./sync.js";
@@ -67,7 +67,7 @@ function runPass(cfg) {
     ? [...new Set(Object.values(plugins.added).flat())]
     : [];
   if (changedFiles.length > 0 || addedPlugins.length > 0) {
-    publish(TOPICS.syncCompleted, { files: changedFiles, plugins: addedPlugins, homes: existingHomes() }, "sync-bridge");
+    emitEvent({ topic: TOPICS.syncCompleted, action: "sync_completed", impact: "notice", details: { files: changedFiles, plugins: addedPlugins, homes: existingHomes() } }, "sync-bridge");
   }
   return { enabled: true, files: results, plugins };
 }
