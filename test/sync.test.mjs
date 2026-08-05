@@ -13,6 +13,20 @@ function makeHome() {
   return dir;
 }
 
+// A home only resolves if it is registered in the apps.json that HUB_APPS_FILE points
+// at (the registry is data-driven, with no built-in app descriptors). Pointing only the
+// per-app env vars at a temp dir is not enough, and relying on the developer's own
+// registry makes these tests pass locally and fail anywhere else.
+function registerApps(homesById) {
+  const appsDir = mkdtempSync(join(tmpdir(), "sb-apps-"));
+  const entries = {};
+  for (const [id, home] of Object.entries(homesById)) {
+    entries[id] = { id, label: id, home: { candidates: [home] } };
+  }
+  writeFileSync(join(appsDir, "apps.json"), JSON.stringify(entries), "utf8");
+  process.env.HUB_APPS_FILE = join(appsDir, "apps.json");
+}
+
 function writeStore(home, store, mtimeSeconds) {
   const file = join(home, "config", "accounts.json");
   writeFileSync(file, JSON.stringify(store, null, 2), "utf8");
@@ -37,6 +51,7 @@ test("accounts strategy unions the account store across both homes, newest field
   const opencode = makeHome();
   process.env.HUB_CLAUDE_DIR = claude;
   process.env.HUB_OPENCODE_DIR = opencode;
+  registerApps({ claude, opencode });
 
   // claude (older): a1, a2(lastUsed 100). opencode (newer): a2(lastUsed 200), a3
   writeStore(claude, pool([
@@ -73,6 +88,7 @@ test("syncFile newest strategy copies the most recent version", async () => {
   const opencode = makeHome();
   process.env.HUB_CLAUDE_DIR = claude;
   process.env.HUB_OPENCODE_DIR = opencode;
+  registerApps({ claude, opencode });
   writeFileSync(join(claude, "config", "plug.json"), "OLD", "utf8");
   utimesSync(join(claude, "config", "plug.json"), 1000, 1000);
   writeFileSync(join(opencode, "config", "plug.json"), "NEW", "utf8");
@@ -92,6 +108,7 @@ test("syncPlugins mirrors every entry across apps by default, except sync:false,
   const opencode = makeHome();
   process.env.HUB_CLAUDE_DIR = claude;
   process.env.HUB_OPENCODE_DIR = opencode;
+  registerApps({ claude, opencode });
 
   // claude: A + B sync by default, D opts out. opencode: C.
   writePlugins(claude, [
