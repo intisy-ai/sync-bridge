@@ -8,7 +8,7 @@ import { syncFile } from "../sync.js";
 import { syncAll } from "../run.js";
 import { syncPlugins } from "../pluginsync.js";
 import { withSyncLock } from "../lock.js";
-import { drainHomes } from "../../core/src/index.js";
+import { drainHomes, readActivity } from "../../core/src/index.js";
 
 function tmp(prefix: string): string {
   return mkdtempSync(join(tmpdir(), prefix));
@@ -28,18 +28,28 @@ function stashEnv(): void {
   for (const k of ENV_KEYS) saved[k] = process.env[k];
 }
 
-// Two existing built-in homes with a config/ dir each. HUB_APPS_FILE points at a
-// missing file so the registry yields only the two built-ins (never the real
-// ~/.config/cairn/apps.json), keeping the home set deterministic and isolated.
+// core's app registry is fully data-driven (no built-in app descriptors): a home
+// only resolves if it is registered in the apps.json that HUB_APPS_FILE points at.
+// Each call writes a fresh apps.json under a new temp dir, so getApps()'s
+// file-path+mtime cache never bleeds a stale entry into the next test.
+function registerApps(homesById: Record<string, string>): void {
+  const appsDir = tmp("sb-apps-");
+  const entries: Record<string, unknown> = {};
+  for (const [id, home] of Object.entries(homesById)) {
+    entries[id] = { id, label: id, home: { candidates: [home] } };
+  }
+  writeFileSync(join(appsDir, "apps.json"), JSON.stringify(entries));
+  process.env.HUB_APPS_FILE = join(appsDir, "apps.json");
+}
+
+// Two homes with a config/ dir each, registered via apps.json.
 function twoHomes(): { claude: string; opencode: string } {
   stashEnv();
   const claude = tmp("sb-c-");
   const opencode = tmp("sb-o-");
   mkdirSync(join(claude, "config"), { recursive: true });
   mkdirSync(join(opencode, "config"), { recursive: true });
-  process.env.HUB_CLAUDE_DIR = claude;
-  process.env.HUB_OPENCODE_DIR = opencode;
-  process.env.HUB_APPS_FILE = join(tmp("sb-noapps-"), "none.json");
+  registerApps({ claude, opencode });
   process.env.HUB_CONFIG_DIR = opencode; // where bus events land for these tests
   return { claude, opencode };
 }
@@ -95,21 +105,47 @@ describe("bus events", () => {
     writeFileSync(join(claude, "config", "settings.json"), JSON.stringify({ logConsole: true }));
     syncFile("config/settings.json", { strategy: "newest", create: true });
 
-    const events: { topic: string; payload: { name?: string } }[] = [];
+    const events: { topic: string; payload: { details?: { file?: string } } }[] = [];
     drainHomes([claude, opencode], "bus-c", (e: typeof events[number]) => events.push(e));
-    expect(events.some((e) => e.topic === "config.changed" && e.payload.name === "config/settings.json")).toBe(true);
+    expect(events.some((e) => e.topic === "config.changed" && e.payload.details?.file === "config/settings.json")).toBe(true);
   });
 
-  it("emits sync.completed summarizing a pass that changed something", () => {
+  it("records a reconciled file as a normalized config change, with an origin", () => {
+    const { claude, opencode } = twoHomes();
+    writeFileSync(join(claude, "config", "settings.json"), JSON.stringify({ logConsole: true }));
+    syncFile("config/settings.json", { strategy: "newest", create: true });
+
+    const { records } = readActivity([claude, opencode], { topics: ["config.changed"] });
+    const rec = records.find((r) => r.details.file === "config/settings.json");
+    expect(rec).toBeDefined();
+    expect(rec!.action).toBe("config_changed");
+    expect(rec!.outcome).toBe("ok");
+    expect(rec!.source).toBe("sync-bridge");
+    // a raw publish carries no origin at all, so this is what proves the channel changed
+    expect(rec!.origin.home.length).toBeGreaterThan(0);
+    expect(rec!.details.homes).toBeGreaterThan(0);
+  });
+
+  it("summarizes a completed pass in a line a generic renderer can show", () => {
     const { claude, opencode } = twoHomes();
     writeFileSync(join(claude, "config", "settings.json"), JSON.stringify({ logConsole: true }));
     syncAll();
 
-    const events: { topic: string; payload: { files?: string[] } }[] = [];
-    drainHomes([claude, opencode], "bus-s", (e: typeof events[number]) => events.push(e));
-    const done = events.find((e) => e.topic === "sync.completed");
+    const { records } = readActivity([claude, opencode], { topics: ["sync.completed"] });
+    const done = records.find((r) => r.action === "sync_completed");
+    expect(done!.outcome).toBe("ok");
+    expect(done!.details.message).toContain("1 file");
+  });
+
+  it("emits a sync_completed activity summarizing a pass that changed something", () => {
+    const { claude, opencode } = twoHomes();
+    writeFileSync(join(claude, "config", "settings.json"), JSON.stringify({ logConsole: true }));
+    syncAll();
+
+    const { records } = readActivity([claude, opencode], { topics: ["sync.completed"] });
+    const done = records.find((r) => r.action === "sync_completed");
     expect(done).toBeTruthy();
-    expect(done!.payload.files).toContain("config/settings.json");
+    expect(done!.details.files).toContain("config/settings.json");
   });
 });
 
@@ -150,18 +186,12 @@ describe("accounts strategy", () => {
 });
 
 describe("registry-aware homes", () => {
-  it("includes a home registered in apps.json alongside the built-ins", () => {
+  it("includes every home registered in apps.json", () => {
     stashEnv();
     const claude = tmp("sb-claude-");
     const opencode = tmp("sb-opencode-");
     const acme = tmp("sb-acme-");
-    const appsDir = tmp("sb-apps-");
-    writeFileSync(join(appsDir, "apps.json"), JSON.stringify({
-      acme: { id: "acme", label: "Acme", home: { candidates: [acme] } },
-    }));
-    process.env.HUB_CLAUDE_DIR = claude;
-    process.env.HUB_OPENCODE_DIR = opencode;
-    process.env.HUB_APPS_FILE = join(appsDir, "apps.json");
+    registerApps({ claude, opencode, acme });
 
     const homes = existingHomes();
     expect(homes).toContain(claude);
@@ -169,15 +199,11 @@ describe("registry-aware homes", () => {
     expect(homes).toContain(acme);
   });
 
-  it("falls back to the built-in homes when apps.json is absent", () => {
+  it("returns no homes when apps.json is absent (core has no built-in app fallback)", () => {
     stashEnv();
-    const claude = tmp("sb-claude-");
-    const opencode = tmp("sb-opencode-");
-    process.env.HUB_CLAUDE_DIR = claude;
-    process.env.HUB_OPENCODE_DIR = opencode;
     process.env.HUB_APPS_FILE = join(tmp("sb-empty-"), "missing.json");
 
-    expect(existingHomes().sort()).toEqual([claude, opencode].sort());
+    expect(existingHomes()).toEqual([]);
   });
 });
 
@@ -193,9 +219,7 @@ describe("plugin sync all-by-default", () => {
       { name: "private-one", url: "u2", sync: false },
     ]));
     writeFileSync(join(opencode, "config", "plugins.json"), JSON.stringify([]));
-    process.env.HUB_CLAUDE_DIR = claude;
-    process.env.HUB_OPENCODE_DIR = opencode;
-    process.env.HUB_APPS_FILE = join(tmp("sb-noapps-"), "none.json");
+    registerApps({ claude, opencode });
 
     const result = syncPlugins();
     expect(result.synced).toBe(true);

@@ -4,7 +4,7 @@
 
 import { existsSync, readdirSync } from "fs";
 import { join } from "path";
-import { publish, TOPICS } from "../core/src/index.js";
+import { emitEvent, TOPICS } from "../core/src/index.js";
 import { existingHomes } from "./homes.js";
 import { getSyncConfig } from "./config.js";
 import { syncFile, sync as syncRegistered } from "./sync.js";
@@ -33,6 +33,19 @@ export function syncAll() {
   const cfg = getSyncConfig();
   if (cfg.enabled === false) return { enabled: false, files: {}, plugins: null };
   return withSyncLock(() => runPass(cfg)) ?? { enabled: true, skipped: "locked", files: {}, plugins: null };
+}
+
+function plural(n, noun) {
+  return n + " " + noun + (n === 1 ? "" : "s");
+}
+
+// The generic renderer has no template for this topic, so the readable line ships
+// with the record.
+function summarize(files, plugins, homes) {
+  const parts = [];
+  if (files) parts.push(plural(files, "file"));
+  if (plugins) parts.push(plural(plugins, "plugin"));
+  return "Synced " + parts.join(" and ") + " across " + plural(homes, "home");
 }
 
 function runPass(cfg) {
@@ -67,7 +80,19 @@ function runPass(cfg) {
     ? [...new Set(Object.values(plugins.added).flat())]
     : [];
   if (changedFiles.length > 0 || addedPlugins.length > 0) {
-    publish(TOPICS.syncCompleted, { files: changedFiles, plugins: addedPlugins, homes: existingHomes() }, "sync-bridge");
+    const homes = existingHomes();
+    emitEvent({
+      topic: TOPICS.syncCompleted,
+      action: "sync_completed",
+      impact: "notice",
+      outcome: "ok",
+      details: {
+        files: changedFiles,
+        plugins: addedPlugins,
+        homes,
+        message: summarize(changedFiles.length, addedPlugins.length, homes.length),
+      },
+    }, "sync-bridge");
   }
   return { enabled: true, files: results, plugins };
 }
