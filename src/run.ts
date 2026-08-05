@@ -35,6 +35,19 @@ export function syncAll() {
   return withSyncLock(() => runPass(cfg)) ?? { enabled: true, skipped: "locked", files: {}, plugins: null };
 }
 
+function plural(n, noun) {
+  return n + " " + noun + (n === 1 ? "" : "s");
+}
+
+// The generic renderer has no template for this topic, so the readable line ships
+// with the record.
+function summarize(files, plugins, homes) {
+  const parts = [];
+  if (files) parts.push(plural(files, "file"));
+  if (plugins) parts.push(plural(plugins, "plugin"));
+  return "Synced " + parts.join(" and ") + " across " + plural(homes, "home");
+}
+
 function runPass(cfg) {
   const cats = cfg.categories || {};
   const exclude = new Set(Array.isArray(cfg.exclude) ? cfg.exclude : []);
@@ -67,7 +80,19 @@ function runPass(cfg) {
     ? [...new Set(Object.values(plugins.added).flat())]
     : [];
   if (changedFiles.length > 0 || addedPlugins.length > 0) {
-    emitEvent({ topic: TOPICS.syncCompleted, action: "sync_completed", impact: "notice", details: { files: changedFiles, plugins: addedPlugins, homes: existingHomes() } }, "sync-bridge");
+    const homes = existingHomes();
+    emitEvent({
+      topic: TOPICS.syncCompleted,
+      action: "sync_completed",
+      impact: "notice",
+      outcome: "ok",
+      details: {
+        files: changedFiles,
+        plugins: addedPlugins,
+        homes,
+        message: summarize(changedFiles.length, addedPlugins.length, homes.length),
+      },
+    }, "sync-bridge");
   }
   return { enabled: true, files: results, plugins };
 }

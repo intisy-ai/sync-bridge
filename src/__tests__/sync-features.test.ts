@@ -105,9 +105,36 @@ describe("bus events", () => {
     writeFileSync(join(claude, "config", "settings.json"), JSON.stringify({ logConsole: true }));
     syncFile("config/settings.json", { strategy: "newest", create: true });
 
-    const events: { topic: string; payload: { name?: string } }[] = [];
+    const events: { topic: string; payload: { details?: { file?: string } } }[] = [];
     drainHomes([claude, opencode], "bus-c", (e: typeof events[number]) => events.push(e));
-    expect(events.some((e) => e.topic === "config.changed" && e.payload.name === "config/settings.json")).toBe(true);
+    expect(events.some((e) => e.topic === "config.changed" && e.payload.details?.file === "config/settings.json")).toBe(true);
+  });
+
+  it("records a reconciled file as a normalized config change, with an origin", () => {
+    const { claude, opencode } = twoHomes();
+    writeFileSync(join(claude, "config", "settings.json"), JSON.stringify({ logConsole: true }));
+    syncFile("config/settings.json", { strategy: "newest", create: true });
+
+    const { records } = readActivity([claude, opencode], { topics: ["config.changed"] });
+    const rec = records.find((r) => r.details.file === "config/settings.json");
+    expect(rec).toBeDefined();
+    expect(rec!.action).toBe("config_changed");
+    expect(rec!.outcome).toBe("ok");
+    expect(rec!.source).toBe("sync-bridge");
+    // a raw publish carries no origin at all, so this is what proves the channel changed
+    expect(rec!.origin.home.length).toBeGreaterThan(0);
+    expect(rec!.details.homes).toBeGreaterThan(0);
+  });
+
+  it("summarizes a completed pass in a line a generic renderer can show", () => {
+    const { claude, opencode } = twoHomes();
+    writeFileSync(join(claude, "config", "settings.json"), JSON.stringify({ logConsole: true }));
+    syncAll();
+
+    const { records } = readActivity([claude, opencode], { topics: ["sync.completed"] });
+    const done = records.find((r) => r.action === "sync_completed");
+    expect(done!.outcome).toBe("ok");
+    expect(done!.details.message).toContain("1 file");
   });
 
   it("emits a sync_completed activity summarizing a pass that changed something", () => {
