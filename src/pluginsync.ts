@@ -1,10 +1,12 @@
 ﻿// @ts-nocheck
-// Cross-app plugin-list sync: mirrors every plugins.json entry into every other home via per-home union (additive, never removes). An entry opts out with sync:false, or via the exclude list.
+// Cross-app plugin-list sync: mirrors a plugins.json entry flagged sync:true into every other
+// home via per-home union (additive, never removes). Opt in, not opt out: most plugins suit one
+// app, and mirroring them all is how each app's plugins ended up installed in the other.
 
 import { existsSync } from "fs";
 import { join } from "path";
 import { atomicWrite, readJson } from "../core/src/index.js";
-import { existingHomes } from "./homes.js";
+import { existingHomeEntries } from "./homes.js";
 import { getSyncConfig } from "./config.js";
 
 // matches plugin-updater's getPluginsPath: config/plugins.json is canonical,
@@ -35,10 +37,15 @@ export function syncPlugins() {
   if (cfg.sync_plugins === false) return { synced: false, reason: "sync_plugins disabled", homes: 0, added: {} };
   const exclude = new Set(Array.isArray(cfg.exclude) ? cfg.exclude : []);
 
-  const homes = existingHomes();
-  if (homes.length < 2) return { synced: false, reason: "fewer than two app homes", homes: homes.length, added: {} };
+  const entriesByHome = existingHomeEntries();
+  if (entriesByHome.length < 2) return { synced: false, reason: "fewer than two app homes", homes: entriesByHome.length, added: {} };
 
-  const files = homes.map(pluginsFile);
+  // A loader is reached by exactly one app, so it belongs only in that app's home even when
+  // something flags it for sync. Every other loader is barred from every other home.
+  const loaderHome = new Map();
+  for (const e of entriesByHome) if (e.loaderId) loaderHome.set(e.loaderId, e.home);
+
+  const files = entriesByHome.map((e) => pluginsFile(e.home));
   const perHome = files.map(readEntries);
 
   // shared pool: the definition of each sync:true entry, keyed by name (a later
@@ -47,24 +54,27 @@ export function syncPlugins() {
   for (const entries of perHome) {
     if (!entries) continue; // unreadable home contributes nothing to the shared pool
     for (const entry of entries) {
-      if (entry && entry.sync !== false && entry.name && !exclude.has(entry.name)) shared.set(entry.name, entry);
+      if (entry && entry.sync === true && entry.name && !exclude.has(entry.name)) shared.set(entry.name, entry);
     }
   }
-  if (shared.size === 0) return { synced: true, homes: homes.length, added: {} };
+  if (shared.size === 0) return { synced: true, homes: entriesByHome.length, added: {} };
 
   const added = {};
   files.forEach((file, index) => {
     const entries = perHome[index];
     if (!entries) return; // skip a home we couldn't read — never overwrite it
+    const home = entriesByHome[index].home;
     const have = new Set(entries.map((entry) => entry && entry.name));
-    const missing = [...shared.values()].filter((entry) => !have.has(entry.name));
+    const missing = [...shared.values()].filter(
+      (entry) => !have.has(entry.name) && (!loaderHome.has(entry.name) || loaderHome.get(entry.name) === home),
+    );
     if (missing.length === 0) return;
     // mirror as a fresh entry; drop the source's local `enabled` state so the
     // plugin lands enabled in the receiving app (default) rather than inheriting
     // a disable toggle from the other app.
     const next = entries.concat(missing.map((entry) => { const e = { ...entry }; delete e.enabled; return e; }));
     atomicWrite(file, JSON.stringify(next, null, 2) + "\n");
-    added[homes[index]] = missing.map((entry) => entry.name);
+    added[home] = missing.map((entry) => entry.name);
   });
-  return { synced: true, homes: homes.length, added };
+  return { synced: true, homes: entriesByHome.length, added };
 }
