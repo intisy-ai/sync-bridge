@@ -4,7 +4,7 @@
 
 import { existsSync, readdirSync } from "fs";
 import { join } from "path";
-import { emitEvent, TOPICS } from "../core/src/index.js";
+import { emitEvent, TOPICS } from "@intisy-ai/core";
 import { existingHomes } from "./homes.js";
 import { getSyncConfig } from "./config.js";
 import { syncFile, sync as syncRegistered } from "./sync.js";

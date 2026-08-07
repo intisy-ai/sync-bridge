@@ -4,7 +4,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { getSyncConfig, writeLog } from "./config.js";
-import { deployCommands, defineReadme, maybeRunReadmeCli, getAppConfigDir } from "../core/src/index.js";
+import { deployCommands, defineReadme, maybeRunReadmeCli, getAppConfigDir } from "@intisy-ai/core";
 import { SYNC_COMMANDS, maybeRunCli } from "./commands.js";
 import { syncAll as runSyncAll } from "./run.js";
 

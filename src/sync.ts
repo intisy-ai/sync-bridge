@@ -3,7 +3,7 @@
 
 import { existsSync, readFileSync, statSync } from "fs";
 import { join } from "path";
-import { atomicWrite, emitEvent, TOPICS } from "../core/src/index.js";
+import { atomicWrite, emitEvent, TOPICS } from "@intisy-ai/core";
 import { existingHomes } from "./homes.js";
 import { STRATEGIES, newest } from "./merge.js";
 import { getSyncConfig, writeLog } from "./config.js";
