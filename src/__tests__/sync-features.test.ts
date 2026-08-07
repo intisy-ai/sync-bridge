@@ -32,11 +32,11 @@ function stashEnv(): void {
 // only resolves if it is registered in the apps.json that HUB_APPS_FILE points at.
 // Each call writes a fresh apps.json under a new temp dir, so getApps()'s
 // file-path+mtime cache never bleeds a stale entry into the next test.
-function registerApps(homesById: Record<string, string>): void {
+function registerApps(homesById: Record<string, string>, loaders: Record<string, string> = {}): void {
   const appsDir = tmp("sb-apps-");
   const entries: Record<string, unknown> = {};
   for (const [id, home] of Object.entries(homesById)) {
-    entries[id] = { id, label: id, home: { candidates: [home] } };
+    entries[id] = { id, label: id, home: { candidates: [home] }, loader: loaders[id] ? { id: loaders[id], url: "u" } : undefined };
   }
   writeFileSync(join(appsDir, "apps.json"), JSON.stringify(entries));
   process.env.HUB_APPS_FILE = join(appsDir, "apps.json");
@@ -207,25 +207,49 @@ describe("registry-aware homes", () => {
   });
 });
 
-describe("plugin sync all-by-default", () => {
-  it("mirrors every entry across homes and skips sync:false", () => {
+describe("plugin sync", () => {
+  function twoHomes(claudeEntries: unknown[], opencodeEntries: unknown[] = [], loaders: Record<string, string> = {}) {
     stashEnv();
     const claude = tmp("sb-c-");
     const opencode = tmp("sb-o-");
     mkdirSync(join(claude, "config"), { recursive: true });
     mkdirSync(join(opencode, "config"), { recursive: true });
-    writeFileSync(join(claude, "config", "plugins.json"), JSON.stringify([
-      { name: "alpha", url: "u1", enabled: true },
-      { name: "private-one", url: "u2", sync: false },
-    ]));
-    writeFileSync(join(opencode, "config", "plugins.json"), JSON.stringify([]));
-    registerApps({ claude, opencode });
+    writeFileSync(join(claude, "config", "plugins.json"), JSON.stringify(claudeEntries));
+    writeFileSync(join(opencode, "config", "plugins.json"), JSON.stringify(opencodeEntries));
+    registerApps({ claude, opencode }, loaders);
+    return { claude, opencode };
+  }
+  const namesIn = (home: string) =>
+    JSON.parse(readFileSync(join(home, "config", "plugins.json"), "utf8")).map((e: { name: string }) => e.name);
 
-    const result = syncPlugins();
-    expect(result.synced).toBe(true);
-    const opencodeEntries = JSON.parse(readFileSync(join(opencode, "config", "plugins.json"), "utf8"));
-    const names = opencodeEntries.map((e: { name: string }) => e.name);
-    expect(names).toContain("alpha");
-    expect(names).not.toContain("private-one");
+  it("mirrors an entry that asks to be synced", () => {
+    const { opencode } = twoHomes([{ name: "alpha", url: "u1", enabled: true, sync: true }]);
+    expect(syncPlugins().synced).toBe(true);
+    expect(namesIn(opencode)).toContain("alpha");
   });
+
+  // Most plugins suit one app. Mirroring an entry that never asked is how each app's plugins
+  // ended up installed in the other, so silence means stay put.
+  it("leaves an entry that says nothing where it is", () => {
+    const { opencode } = twoHomes([
+      { name: "opencode-cursor", url: "u1" },
+      { name: "private-one", url: "u2", sync: false },
+    ]);
+    expect(syncPlugins().synced).toBe(true);
+    expect(namesIn(opencode)).toEqual([]);
+  });
+
+  // A loader is reached by exactly one app, so mirroring it promises an install that can
+  // never load, whatever the entry asks for.
+  it("never mirrors a loader into another app's home", () => {
+    const { claude, opencode } = twoHomes(
+      [],
+      [{ name: "opencode-loader", url: "u1", sync: true }],
+      { claude: "claude-code-loader", opencode: "opencode-loader" },
+    );
+    expect(syncPlugins().synced).toBe(true);
+    expect(namesIn(claude)).toEqual([]);
+    expect(namesIn(opencode)).toContain("opencode-loader");
+  });
+
 });

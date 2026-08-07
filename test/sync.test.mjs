@@ -103,14 +103,14 @@ test("syncFile newest strategy copies the most recent version", async () => {
   rmSync(opencode, { recursive: true, force: true });
 });
 
-test("syncPlugins mirrors every entry across apps by default, except sync:false, per-home", async () => {
+test("syncPlugins mirrors only the entries that ask for it, per-home", async () => {
   const claude = makeHome();
   const opencode = makeHome();
   process.env.HUB_CLAUDE_DIR = claude;
   process.env.HUB_OPENCODE_DIR = opencode;
   registerApps({ claude, opencode });
 
-  // claude: A + B sync by default, D opts out. opencode: C.
+  // claude: A asks to sync, B says nothing, D opts out. opencode: C says nothing.
   writePlugins(claude, [
     { name: "plugin-a", url: "u/a", enabled: true, autoUpdate: false, sync: true },
     { name: "plugin-b", url: "u/b", enabled: true, autoUpdate: false },
@@ -124,10 +124,11 @@ test("syncPlugins mirrors every entry across apps by default, except sync:false,
   const result = mod.syncPlugins();
   expect(result.synced).toBe(true);
 
+  // Only A crosses. B and C never asked, so each stays in the home it was added to.
   const claudeNames = readPlugins(claude).map((e) => e.name).sort();
   const opencodeNames = readPlugins(opencode).map((e) => e.name).sort();
-  expect(claudeNames).toEqual(["plugin-a", "plugin-b", "plugin-c", "plugin-d"]);
-  expect(opencodeNames).toEqual(["plugin-a", "plugin-b", "plugin-c"]);
+  expect(claudeNames).toEqual(["plugin-a", "plugin-b", "plugin-d"]);
+  expect(opencodeNames).toEqual(["plugin-a", "plugin-c"]);
 
   // idempotent: a second pass adds nothing
   const again = mod.syncPlugins();
