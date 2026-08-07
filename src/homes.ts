@@ -3,7 +3,7 @@
 // sync-bridge is the only component permitted to span all app homes.
 
 import { existsSync } from "fs";
-import { getApps, resolveHome } from "../core/src/index.js";
+import { getApps, resolveHome } from "@intisy-ai/core";
 
 // every registered app home (built-ins + apps.json), deduped by resolved path, each carrying
 // the app it belongs to and the loader that app is reached through.

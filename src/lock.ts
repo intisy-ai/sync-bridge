@@ -4,7 +4,7 @@
 
 import { openSync, closeSync, unlinkSync, statSync, existsSync } from "fs";
 import { join, dirname } from "path";
-import { getAppConfigDir, ensureDir } from "../core/src/index.js";
+import { getAppConfigDir, ensureDir } from "@intisy-ai/core";
 
 const STALE_MS = 60_000;
 

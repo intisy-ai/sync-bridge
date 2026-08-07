@@ -8,7 +8,7 @@ import { syncFile } from "../sync.js";
 import { syncAll } from "../run.js";
 import { syncPlugins } from "../pluginsync.js";
 import { withSyncLock } from "../lock.js";
-import { drainHomes, readActivity } from "../../core/src/index.js";
+import { drainHomes, readActivity } from "@intisy-ai/core";
 
 function tmp(prefix: string): string {
   return mkdtempSync(join(tmpdir(), prefix));

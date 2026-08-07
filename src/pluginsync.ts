@@ -5,7 +5,7 @@
 
 import { existsSync } from "fs";
 import { join } from "path";
-import { atomicWrite, readJson } from "../core/src/index.js";
+import { atomicWrite, readJson } from "@intisy-ai/core";
 import { existingHomeEntries } from "./homes.js";
 import { getSyncConfig } from "./config.js";
 

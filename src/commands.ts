@@ -2,7 +2,7 @@
 // Cross-app slash-commands for sync-bridge plus the CLI actions behind them.
 // The commands shell back into the deployed hook bundle (`node <bundle> <action>`),
 // so maybeRunCli runs the action and the process exits before the plugin loads.
-import { configCommand, runConfigCli, type CommandDef } from "../core/src/index.js";
+import { configCommand, runConfigCli, type CommandDef } from "@intisy-ai/core";
 import { syncAll } from "./run.js";
 
 export const SYNC_COMMANDS: CommandDef[] = [

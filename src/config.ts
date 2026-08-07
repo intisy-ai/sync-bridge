@@ -4,7 +4,7 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { existingHomes } from "./homes.js";
-import { makeWriteLog, defineConfig, defineCapabilities } from "../core/src/index.js";
+import { makeWriteLog, defineConfig, defineCapabilities } from "@intisy-ai/core";
 
 const NAME = "sync-bridge";
 

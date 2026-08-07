@@ -5,7 +5,7 @@
 //   dist/lib.js   — the in-process library API (syncPlugins, sync, homes…)
 import { build } from "esbuild";
 
-const common = { bundle: true, platform: "node", format: "esm", target: "node20", logLevel: "info" };
+const common = { bundle: true, external: ["@intisy-ai/core"], platform: "node", format: "esm", target: "node20", logLevel: "info" };
 
 await build({ ...common, entryPoints: ["src/index.ts"], outfile: "dist/index.js" });
 await build({ ...common, entryPoints: ["src/lib.ts"], outfile: "dist/lib.js" });
