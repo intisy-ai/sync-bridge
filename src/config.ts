@@ -28,16 +28,32 @@ defineConfig(NAME, {
 defineCapabilities(NAME, {
   fields: [
     { key: "logging", type: "boolean", label: "Logging", group: "General" },
-    { key: "enabled", type: "boolean", label: "Sync enabled", description: "Master switch for cross-app sync.", group: "General" },
+    { key: "enabled", type: "boolean", label: "Sync across apps", description: "Keep accounts, plugins, and settings mirrored across every app. Secrets are never shared.", group: "General" },
     { key: "sync_plugins", type: "boolean", label: "Sync plugins", group: "General" },
-    { key: "categories.accounts", type: "boolean", label: "Accounts", group: "Categories" },
-    { key: "categories.plugins", type: "boolean", label: "Plugins", group: "Categories" },
-    { key: "categories.settings", type: "boolean", label: "Global settings", group: "Categories" },
-    { key: "categories.pluginConfigs", type: "boolean", label: "Plugin configs", group: "Categories" },
+    { key: "categories.accounts", type: "boolean", label: "Accounts", description: "Mirror provider logins across apps (no login is ever lost).", group: "Categories" },
+    { key: "categories.plugins", type: "boolean", label: "Plugins", description: "Install a plugin in one app and it appears in the others.", group: "Categories" },
+    { key: "categories.settings", type: "boolean", label: "Global settings", description: "Share config/settings.json across apps (secrets excluded).", group: "Categories" },
+    { key: "categories.pluginConfigs", type: "boolean", label: "Plugin configs", description: "Share each plugin's config across apps (secrets excluded).", group: "Categories" },
     { key: "default_strategy", type: "string", label: "Default merge strategy", group: "Advanced" },
     { key: "debounce_seconds", type: "number", label: "Debounce (s)", min: 0, group: "Advanced" },
     { key: "exclude", type: "list", itemType: "string", label: "Exclude files", group: "Advanced" },
     { key: "files", type: "multiline", label: "Synced files", description: "JSON array of { name, strategy } entries.", group: "Advanced" },
+  ],
+  actions: [
+    { id: "sync", label: "Sync now", description: "Reconcile every app home immediately." },
+  ],
+  // Reconciling homes against each other is the whole job, so these settings are not
+  // per-home: a surface managing several writes them to all of them.
+  sections: [
+    {
+      id: "sync",
+      label: "Sync",
+      description: "Keep accounts, plugins, and settings mirrored across every app. Secrets are never shared.",
+      order: 40,
+      scope: "allHomes",
+      fields: ["enabled", "categories.accounts", "categories.plugins", "categories.settings", "categories.pluginConfigs"],
+      actions: ["sync"],
+    },
   ],
 });
 
