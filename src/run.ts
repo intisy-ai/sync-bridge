@@ -48,6 +48,16 @@ function summarize(files, plugins, homes) {
   return "Synced " + parts.join(" and ") + " across " + plural(homes, "home");
 }
 
+// What a pass actually moved, which is what both the completion event and the cross-app-sync
+// capability report. One computation, so a host and the activity log cannot disagree.
+export function changedFilesOf(results): string[] {
+  return Object.keys(results || {}).filter((name) => results[name] && results[name].wrote > 0);
+}
+
+export function addedPluginsOf(plugins): string[] {
+  return plugins && plugins.added ? [...new Set(Object.values(plugins.added).flat())] : [];
+}
+
 function runPass(cfg) {
   const cats = cfg.categories || {};
   const exclude = new Set(Array.isArray(cfg.exclude) ? cfg.exclude : []);
@@ -75,11 +85,9 @@ function runPass(cfg) {
 
   const plugins = cats.plugins !== false ? syncPlugins() : null;
 
-  const changedFiles = Object.keys(results).filter((name) => results[name] && results[name].wrote > 0);
-  const addedPlugins = plugins && plugins.added
-    ? [...new Set(Object.values(plugins.added).flat())]
-    : [];
-  if (changedFiles.length > 0 || addedPlugins.length > 0) {
+  const files = changedFilesOf(results);
+  const added = addedPluginsOf(plugins);
+  if (files.length > 0 || added.length > 0) {
     const homes = existingHomes();
     emitEvent({
       topic: TOPICS.syncCompleted,
@@ -87,10 +95,10 @@ function runPass(cfg) {
       impact: "notice",
       outcome: "ok",
       details: {
-        files: changedFiles,
-        plugins: addedPlugins,
+        files,
+        plugins: added,
         homes,
-        message: summarize(changedFiles.length, addedPlugins.length, homes.length),
+        message: summarize(files.length, added.length, homes.length),
       },
     }, "sync-bridge");
   }

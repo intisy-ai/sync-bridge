@@ -1,5 +1,6 @@
 ﻿// @ts-nocheck
-// sync-bridge plugin hook entry — exports ONLY the hook; library API lives in dist/lib.js (see lib.ts) since OpenCode runs every export as a hook.
+// sync-bridge entry: the hook by name, the api plugin as the default. The library API lives in
+// dist/lib.js (see lib.ts) rather than here, since OpenCode runs every named export as a hook.
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
@@ -130,4 +131,6 @@ export async function activate() {
   return SyncBridgePlugin();
 }
 
-export default SyncBridgePlugin;
+// SyncBridgePlugin and activate stay exported by name, which is what OpenCode and the loader
+// invoke; an api host reads the default instead, so the default is the api plugin.
+export { default } from "./plugin.js";
