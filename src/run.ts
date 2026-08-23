@@ -4,7 +4,7 @@
 
 import { existsSync, readdirSync } from "fs";
 import { join } from "path";
-import { emitEvent, TOPICS } from "@intisy-ai/core";
+import { SYNC_TOPICS, syncRuntime } from "./runtime.js";
 import { existingHomes } from "./homes.js";
 import { getSyncConfig } from "./config.js";
 import { syncFile, sync as syncRegistered } from "./sync.js";
@@ -89,8 +89,8 @@ function runPass(cfg) {
   const added = addedPluginsOf(plugins);
   if (files.length > 0 || added.length > 0) {
     const homes = existingHomes();
-    emitEvent({
-      topic: TOPICS.syncCompleted,
+    syncRuntime().emit({
+      topic: SYNC_TOPICS.syncCompleted,
       action: "sync_completed",
       impact: "notice",
       outcome: "ok",
@@ -100,7 +100,7 @@ function runPass(cfg) {
         homes,
         message: summarize(files.length, added.length, homes.length),
       },
-    }, "sync-bridge");
+    });
   }
   return { enabled: true, files: results, plugins };
 }

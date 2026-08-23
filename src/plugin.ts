@@ -3,6 +3,29 @@ import type { Plugin, PluginContext } from "@intisy-ai/api";
 import { addedPluginsOf, changedFilesOf, syncAll } from "./run.js";
 import { existingHomes } from "./homes.js";
 import { SYNC_BRIDGE_SETTINGS } from "./config.js";
+import { setSyncRuntime, type SyncRuntime } from "./runtime.js";
+
+/**
+ * The engine's runtime, answered by this plugin's context.
+ *
+ * @remarks
+ * Every home rather than this plugin's own, which is what reconciling across apps means and what
+ * `ctx.homes()` exists to answer. An error is logged at error level and anything else at info,
+ * because the context's logger separates them where this engine passes a flag.
+ */
+function contextRuntime(context: PluginContext): SyncRuntime {
+  return {
+    homes: () => context.homes().map((home) => ({
+      home: home.paths.home,
+      app: home.app,
+      loaderId: home.loader,
+      present: home.present,
+    })),
+    home: () => context.paths.home,
+    log: (message, isError) => (isError ? context.log.error(message) : context.log.info(message)),
+    emit: ({ topic, ...payload }) => context.events.publish(context.topic(topic), payload),
+  };
+}
 
 /**
  * This plugin's `cross-app-sync` capability.
@@ -46,6 +69,7 @@ export function syncBridgeSettings(): SettingsCapability {
 
 const plugin: Plugin = {
   activate(context: PluginContext) {
+    setSyncRuntime(contextRuntime(context));
     context.provide(context.capability<CrossAppSyncCapability>("cross-app-sync"), crossAppSync());
     context.provide(context.capability<SettingsCapability>("settings"), syncBridgeSettings());
   },

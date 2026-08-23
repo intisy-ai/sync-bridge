@@ -1,19 +1,13 @@
 // @ts-nocheck
-// Resolves every app home from the shared registry (core's getApps + resolveHome).
-// sync-bridge is the only component permitted to span all app homes.
+// Every app home, from whoever is running this bundle. sync-bridge is the only component
+// permitted to span all app homes.
 
-import { existsSync } from "fs";
-import { getApps, resolveHome } from "@intisy-ai/core";
+import { syncRuntime } from "./runtime.js";
 
-// every registered app home (built-ins + apps.json), deduped by resolved path, each carrying
-// the app it belongs to and the loader that app is reached through.
+// every app home there is, deduped by resolved path, each carrying the app it belongs to and the
+// loader that app is reached through.
 export function allHomeEntries() {
-  const out = [];
-  for (const desc of getApps()) {
-    const home = resolveHome(desc);
-    if (home && !out.some((e) => e.home === home)) out.push({ home, app: desc.id, loaderId: desc.loader?.id });
-  }
-  return out;
+  return syncRuntime().homes();
 }
 
 export function allHomes() {
@@ -22,7 +16,7 @@ export function allHomes() {
 
 // app homes that exist on disk; an absent home means that app isn't installed.
 export function existingHomeEntries() {
-  return allHomeEntries().filter((e) => existsSync(e.home));
+  return allHomeEntries().filter((e) => e.present);
 }
 
 export function existingHomes() {

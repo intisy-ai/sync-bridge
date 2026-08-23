@@ -6,8 +6,13 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { getSyncConfig, writeLog } from "./config.js";
 import { defineReadme, maybeRunReadmeCli, getAppConfigDir } from "@intisy-ai/core";
+import { installCoreRuntime } from "./runtime-core.js";
 import { maybeRunCli } from "./commands.js";
 import { syncAll as runSyncAll } from "./run.js";
+
+// Installed before anything reads it, and replaced by the plugin's own context when a host
+// activates the default export below.
+installCoreRuntime();
 
 defineReadme({
   description:
@@ -32,7 +37,7 @@ defineReadme({
     UPDATER["plugin-updater"] -->|syncPlugins() each launch| LIB`,
   structure: {
     src: [
-      "TypeScript source (`homes`, `merge`, `sync`, `pluginsync`, `config`, `commands`, `index` = hook, `lib` = library entry)",
+      "TypeScript source (`runtime` = the seam the engine takes homes, logging and the ledger through, `homes`, `merge`, `sync`, `pluginsync`, `files`, `config`, `commands`, `index` = hook, `lib` = library entry)",
       "`core/` — git submodule ([`intisy-ai/core`](https://github.com/intisy-ai/core)): shared config, logging, and the cross-app command framework — bundled into both output files by esbuild",
       "`test/` — Node test runner specs",
     ],

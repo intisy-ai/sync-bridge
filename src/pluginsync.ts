@@ -5,7 +5,7 @@
 
 import { existsSync } from "fs";
 import { join } from "path";
-import { atomicWrite, readJson } from "@intisy-ai/core";
+import { atomicWrite, readJson } from "./files.js";
 import { existingHomeEntries } from "./homes.js";
 import { getSyncConfig } from "./config.js";
 
@@ -20,8 +20,8 @@ function pluginsFile(home) {
 }
 
 // [] = genuinely absent/empty (safe to add into). null = the file exists but is
-// unreadable/unparseable — callers MUST skip that home so we never clobber real
-// local entries we just failed to read. Tolerates // line comments (core's readJson).
+// unreadable/unparseable, so callers MUST skip that home and never clobber real
+// local entries we just failed to read.
 function readEntries(file) {
   if (!existsSync(file)) return [];
   const parsed = readJson(file, null);

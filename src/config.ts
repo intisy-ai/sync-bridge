@@ -1,10 +1,11 @@
 ﻿// @ts-nocheck
-// sync-bridge config: bespoke multi-home file search; log writing delegated to core's makeWriteLog.
+// sync-bridge config: bespoke multi-home file search; log writing goes to whoever is running this
+// bundle, which is core for the program half and the plugin context for the plugin half.
 
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { existingHomes } from "./homes.js";
-import { makeWriteLog } from "@intisy-ai/core";
+import { syncRuntime } from "./runtime.js";
 import type { CapabilitySchema } from "@intisy-ai/core";
 
 const NAME = "sync-bridge";
@@ -71,4 +72,6 @@ export function getSyncConfig() {
   return SYNC_CONFIG;
 }
 
-export const writeLog = makeWriteLog(NAME);
+export function writeLog(message, isError) {
+  syncRuntime().log(message, isError);
+}

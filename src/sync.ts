@@ -3,7 +3,8 @@
 
 import { existsSync, readFileSync, statSync } from "fs";
 import { join } from "path";
-import { atomicWrite, emitEvent, TOPICS } from "@intisy-ai/core";
+import { atomicWrite } from "./files.js";
+import { SYNC_TOPICS, syncRuntime } from "./runtime.js";
 import { existingHomes } from "./homes.js";
 import { STRATEGIES, newest } from "./merge.js";
 import { getSyncConfig, writeLog } from "./config.js";
@@ -55,14 +56,14 @@ export function syncFile(name, options) {
     if (!state.readable || state.data !== merged) { atomicWrite(state.file, merged); wrote++; }
   }
   if (wrote > 0) {
-    emitEvent({
-      topic: TOPICS.configChanged,
+    syncRuntime().emit({
+      topic: SYNC_TOPICS.configChanged,
       action: "config_changed",
       impact: "notice",
       outcome: "ok",
       subject: { kind: "config-file", id: name, label: name },
       details: { file: name, homes: homes.length, wrote, message: `Reconciled ${name} across ${homes.length} homes` },
-    }, "sync-bridge");
+    });
   }
   return { synced: true, homes: homes.length, wrote };
 }

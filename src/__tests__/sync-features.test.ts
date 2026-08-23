@@ -9,6 +9,11 @@ import { syncAll } from "../run.js";
 import { syncPlugins } from "../pluginsync.js";
 import { withSyncLock } from "../lock.js";
 import { drainHomes, readActivity } from "@intisy-ai/core";
+import { installCoreRuntime } from "../runtime-core.js";
+
+// The engine takes its homes, logging and ledger from whoever runs it; a test runs it as the
+// program half does, so it installs the same core-backed runtime.
+installCoreRuntime();
 
 function tmp(prefix: string): string {
   return mkdtempSync(join(tmpdir(), prefix));

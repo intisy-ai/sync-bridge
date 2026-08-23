@@ -4,6 +4,11 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { readActivity } from "@intisy-ai/core";
 import { crossAppSync } from "../plugin.js";
+import { installCoreRuntime } from "../runtime-core.js";
+
+// The engine takes its homes, logging and ledger from whoever runs it; a test runs it as the
+// program half does, so it installs the same core-backed runtime.
+installCoreRuntime();
 
 function tmp(prefix: string): string {
   return mkdtempSync(join(tmpdir(), prefix));
@@ -75,5 +80,34 @@ describe("the entry module's default export", () => {
     } as never);
     const manifest = JSON.parse(readFileSync(new URL("../../plugin.json", import.meta.url), "utf8"));
     expect(provided.slice().sort()).toEqual(manifest.capabilities.slice().sort());
+  });
+
+  // The whole point of activating is that the engine stops reading core's registry: it reconciles
+  // the homes the CONTEXT names. Registering a different pair in apps.json is what makes the
+  // assertion decisive rather than accidentally true.
+  it("reconciles the homes its context names, not the ones the registry holds", async () => {
+    twoHomes();
+    const first = tmp("sb-ctx-a-");
+    const second = tmp("sb-ctx-b-");
+    mkdirSync(join(first, "config"), { recursive: true });
+    mkdirSync(join(second, "config"), { recursive: true });
+    writeFileSync(join(first, "config", "settings.json"), JSON.stringify({ logConsole: true }));
+
+    const capabilities = new Map<string, { sync(): Promise<{ homes: string[] }> }>();
+    const plugin = (await import("../index.js")).default;
+    await plugin.activate({
+      paths: { home: first },
+      capability: (id: string) => ({ id }),
+      provide: (key: { id: string }, implementation: never) => { capabilities.set(key.id, implementation); },
+      homes: () => [first, second].map((home) => ({ app: home, label: home, present: true, paths: { home } })),
+      log: { info: () => {}, error: () => {} },
+      events: { publish: () => {} },
+      topic: (id: string) => ({ id }),
+    } as never);
+
+    const result = await capabilities.get("cross-app-sync")!.sync();
+
+    expect(result.homes.sort()).toEqual([first, second].sort());
+    expect(JSON.parse(readFileSync(join(second, "config", "settings.json"), "utf8"))).toEqual({ logConsole: true });
   });
 });

@@ -4,6 +4,11 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { syncAll } from "../run.js";
 import { crossAppSync } from "../plugin.js";
+import { installCoreRuntime } from "../runtime-core.js";
+
+// The engine takes its homes, logging and ledger from whoever runs it; a test runs it as the
+// program half does, so it installs the same core-backed runtime.
+installCoreRuntime();
 
 // Its own file on purpose: sync-bridge caches its config on first read, for the life of the
 // process, so a test that needs a config read at all must be the only one in its module registry.
