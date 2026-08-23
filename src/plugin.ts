@@ -1,8 +1,8 @@
-import { CROSS_APP_SYNC } from "@intisy-ai/core";
-import type { CrossAppSyncCapability, SyncResult } from "@intisy-ai/core";
+import type { CrossAppSyncCapability, SettingsCapability, SyncResult } from "@intisy-ai/core";
 import type { Plugin, PluginContext } from "@intisy-ai/api";
 import { addedPluginsOf, changedFilesOf, syncAll } from "./run.js";
 import { existingHomes } from "./homes.js";
+import { SYNC_BRIDGE_SETTINGS } from "./config.js";
 
 /**
  * This plugin's `cross-app-sync` capability.
@@ -26,9 +26,28 @@ export function crossAppSync(): CrossAppSyncCapability {
   };
 }
 
+/**
+ * This plugin's `settings` capability: what its settings are called, and the one action behind them.
+ *
+ * @remarks
+ * The only action is the same full pass the slash command runs, so a surface offering "sync now"
+ * and a user typing the command reach identical code.
+ */
+export function syncBridgeSettings(): SettingsCapability {
+  return {
+    schema: () => SYNC_BRIDGE_SETTINGS,
+    run: async (actionId: string) => {
+      if (actionId !== "sync") return { ok: false, message: `unknown action: ${actionId}` };
+      const pass = syncAll();
+      return { ok: true, message: `${changedFilesOf(pass.files).length} files, ${addedPluginsOf(pass.plugins).length} plugins` };
+    },
+  };
+}
+
 const plugin: Plugin = {
   activate(context: PluginContext) {
-    context.provide(CROSS_APP_SYNC, crossAppSync());
+    context.provide(context.capability<CrossAppSyncCapability>("cross-app-sync"), crossAppSync());
+    context.provide(context.capability<SettingsCapability>("settings"), syncBridgeSettings());
   },
   deactivate() {},
 };

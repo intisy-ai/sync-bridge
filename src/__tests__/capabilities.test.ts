@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { getCapabilities, resolveLayout } from "@intisy-ai/core";
-import "../config.js";
+import { resolveLayout } from "@intisy-ai/core";
+import { SYNC_BRIDGE_SETTINGS } from "../config.js";
 
 describe("the settings section sync-bridge contributes", () => {
-  const layout = resolveLayout("sync-bridge", getCapabilities("sync-bridge"));
+  const layout = resolveLayout("sync-bridge", SYNC_BRIDGE_SETTINGS);
 
   it("offers the master switch, every category, and the run action in one section", () => {
     expect(layout.sections).toHaveLength(1);
@@ -31,6 +31,6 @@ describe("the settings section sync-bridge contributes", () => {
   });
 
   it("names an action the bundle actually answers to", () => {
-    expect(getCapabilities("sync-bridge").actions?.map((a) => a.id)).toContain("sync");
+    expect(SYNC_BRIDGE_SETTINGS.actions?.map((a) => a.id)).toContain("sync");
   });
 });

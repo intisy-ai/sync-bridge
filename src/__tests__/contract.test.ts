@@ -6,7 +6,7 @@ runPluginContract({
   entry: "dist/index.js",
   configName: "sync-bridge",
   app: "both",
-  commands: ["sync", "sync-bridge-config"],
+  commands: ["sync"],
   deploy: "load",
   actions: [["sync"]],
   readme: true,

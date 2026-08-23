@@ -69,6 +69,8 @@ describe("the entry module's default export", () => {
     const plugin = (await import("../index.js")).default;
     await plugin.activate({
       paths: { home: opencode },
+      // The engine mints a typed key from an id alone, which is all the plugin needs from it here.
+      capability: (id: string) => ({ id }),
       provide: (key: string | { id: string }) => { provided.push(typeof key === "string" ? key : key.id); },
     } as never);
     const manifest = JSON.parse(readFileSync(new URL("../../plugin.json", import.meta.url), "utf8"));

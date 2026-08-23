@@ -78,7 +78,7 @@ Give any `plugins.json` entry a `sync: true` flag and it is mirrored into the ot
 
 ## Configuration
 
-Config file: `<configDir>/config/sync-bridge.json` (edit via the loader or `/sync-bridge-config set`).
+Config file: `<configDir>/config/sync-bridge.json` (edit it directly, or through whatever settings surface the app offers).
 
 ```json
 {
@@ -118,7 +118,6 @@ Config file: `<configDir>/config/sync-bridge.json` (edit via the loader or `/syn
 
 | Command | Description | Arguments |
 | --- | --- | --- |
-| `/sync-bridge-config` | View and change sync-bridge configuration | `list | get <key> | set <key> <value>` |
 | `/sync` | Reconcile synced files + mirror sync-enabled plugins across both apps now |  |
 
 ## Dependencies

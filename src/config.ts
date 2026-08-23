@@ -4,7 +4,8 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { existingHomes } from "./homes.js";
-import { makeWriteLog, defineConfig, defineCapabilities } from "@intisy-ai/core";
+import { makeWriteLog } from "@intisy-ai/core";
+import type { CapabilitySchema } from "@intisy-ai/core";
 
 const NAME = "sync-bridge";
 
@@ -13,19 +14,9 @@ const NAME = "sync-bridge";
 // resolved per home to config/<name> or <name>, whichever exists.
 const DEFAULT_FILES = [{ name: "accounts.json", strategy: "accounts" }];
 
-// register defaults so the loader can discover + edit them (writes no file on load)
-defineConfig(NAME, {
-  logging: true,
-  files: DEFAULT_FILES,
-  enabled: true,
-  sync_plugins: true,
-  categories: { accounts: true, plugins: true, settings: true, pluginConfigs: true },
-  exclude: [],
-  default_strategy: "newest",
-  debounce_seconds: 0,
-});
-
-defineCapabilities(NAME, {
+// What each setting is called and how a surface renders it, beside the values the manifest
+// declares. Data the settings capability answers with.
+export const SYNC_BRIDGE_SETTINGS: CapabilitySchema = {
   fields: [
     { key: "logging", type: "boolean", label: "Logging", group: "General" },
     { key: "enabled", type: "boolean", label: "Sync across apps", description: "Keep accounts, plugins, and settings mirrored across every app. Secrets are never shared.", group: "General" },
@@ -55,7 +46,7 @@ defineCapabilities(NAME, {
       actions: ["sync"],
     },
   ],
-});
+};
 
 let SYNC_CONFIG = null;
 

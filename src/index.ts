@@ -5,8 +5,8 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { getSyncConfig, writeLog } from "./config.js";
-import { deployCommands, defineReadme, maybeRunReadmeCli, getAppConfigDir } from "@intisy-ai/core";
-import { SYNC_COMMANDS, maybeRunCli } from "./commands.js";
+import { defineReadme, maybeRunReadmeCli, getAppConfigDir } from "@intisy-ai/core";
+import { maybeRunCli } from "./commands.js";
 import { syncAll as runSyncAll } from "./run.js";
 
 defineReadme({
@@ -38,7 +38,6 @@ defineReadme({
     ],
     dist: ["Compiled output (generated; not committed): `index.js` (plugin hook) + `lib.js` (in-process library)"],
   },
-  commands: SYNC_COMMANDS,
   dependencies: ["core", "plugin-updater"],
   extraSections: [
     {
@@ -69,16 +68,10 @@ Give any \`plugins.json\` entry a \`sync: true\` flag and it is mirrored into th
 });
 
 // When invoked as `node <bundle> <action>` (from a slash-command), run the action
-// and exit before the plugin/hook logic. On a normal load, keep the slash-commands
-// deployed to both apps (idempotent, best-effort).
+// and exit before the plugin/hook logic.
 if (maybeRunReadmeCli("sync-bridge")) process.exit(0);
-if (await maybeRunCli("sync-bridge")) {
+if (await maybeRunCli()) {
   process.exit(0);
-}
-try {
-  deployCommands("sync-bridge", SYNC_COMMANDS);
-} catch {
-  /* best-effort */
 }
 
 // Path for the debounce timestamp; stored in the running app's own config dir so
