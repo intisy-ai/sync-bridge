@@ -38,7 +38,6 @@ defineReadme({
   structure: {
     src: [
       "TypeScript source (`runtime` = the seam the engine takes homes, logging and the ledger through, `homes`, `merge`, `sync`, `pluginsync`, `files`, `config`, `commands`, `index` = hook, `lib` = library entry)",
-      "`core/` — git submodule ([`intisy-ai/core`](https://github.com/intisy-ai/core)): shared config, logging, and the cross-app command framework — bundled into both output files by esbuild",
       "`test/` — Node test runner specs",
     ],
     dist: ["Compiled output (generated; not committed): `index.js` (plugin hook) + `lib.js` (in-process library)"],
