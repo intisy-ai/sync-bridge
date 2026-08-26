@@ -1,6 +1,6 @@
 {
   "name": "sync-bridge",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "description": "Syncs config and account files between Claude Code and OpenCode homes \u00e2\u20ac\u201d the one plugin allowed to span both app directories",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
