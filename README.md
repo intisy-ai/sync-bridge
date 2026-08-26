@@ -34,8 +34,7 @@ flowchart TD
 ## Structure
 
 - `src/`
-  - TypeScript source (`homes`, `merge`, `sync`, `pluginsync`, `config`, `commands`, `index` = hook, `lib` = library entry)
-  - `core/` — git submodule ([`intisy-ai/core`](https://github.com/intisy-ai/core)): shared config, logging, and the cross-app command framework — bundled into both output files by esbuild
+  - TypeScript source (`runtime` = the seam the engine takes homes, logging and the ledger through, `homes`, `merge`, `sync`, `pluginsync`, `files`, `config`, `commands`, `index` = hook, `lib` = library entry)
   - `test/` — Node test runner specs
 - `dist/`
   - Compiled output (generated; not committed): `index.js` (plugin hook) + `lib.js` (in-process library)
@@ -78,7 +77,7 @@ Give any `plugins.json` entry a `sync: true` flag and it is mirrored into the ot
 
 ## Configuration
 
-Config file: `<configDir>/config/sync-bridge.json` (edit via the loader or `/sync-bridge-config set`).
+Config file: `<configDir>/config/sync-bridge.json` (edit it directly, or through whatever settings surface the app offers).
 
 ```json
 {
@@ -118,7 +117,6 @@ Config file: `<configDir>/config/sync-bridge.json` (edit via the loader or `/syn
 
 | Command | Description | Arguments |
 | --- | --- | --- |
-| `/sync-bridge-config` | View and change sync-bridge configuration | `list | get <key> | set <key> <value>` |
 | `/sync` | Reconcile synced files + mirror sync-enabled plugins across both apps now |  |
 
 ## Dependencies
