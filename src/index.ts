@@ -1,12 +1,18 @@
 ﻿// @ts-nocheck
-// sync-bridge plugin hook entry — exports ONLY the hook; library API lives in dist/lib.js (see lib.ts) since OpenCode runs every export as a hook.
+// sync-bridge entry: the hook by name, the api plugin as the default. The library API lives in
+// dist/lib.js (see lib.ts) rather than here, since OpenCode runs every named export as a hook.
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { getSyncConfig, writeLog } from "./config.js";
-import { deployCommands, defineReadme, maybeRunReadmeCli, getAppConfigDir } from "@intisy-ai/core";
-import { SYNC_COMMANDS, maybeRunCli } from "./commands.js";
+import { defineReadme, maybeRunReadmeCli, getAppConfigDir } from "@intisy-ai/core";
+import { installCoreRuntime } from "./runtime-core.js";
+import { maybeRunCli } from "./commands.js";
 import { syncAll as runSyncAll } from "./run.js";
+
+// Installed before anything reads it, and replaced by the plugin's own context when a host
+// activates the default export below.
+installCoreRuntime();
 
 defineReadme({
   description:
@@ -31,13 +37,11 @@ defineReadme({
     UPDATER["plugin-updater"] -->|syncPlugins() each launch| LIB`,
   structure: {
     src: [
-      "TypeScript source (`homes`, `merge`, `sync`, `pluginsync`, `config`, `commands`, `index` = hook, `lib` = library entry)",
-      "`core/` — git submodule ([`intisy-ai/core`](https://github.com/intisy-ai/core)): shared config, logging, and the cross-app command framework — bundled into both output files by esbuild",
+      "TypeScript source (`runtime` = the seam the engine takes homes, logging and the ledger through, `homes`, `merge`, `sync`, `pluginsync`, `files`, `config`, `commands`, `index` = hook, `lib` = library entry)",
       "`test/` — Node test runner specs",
     ],
     dist: ["Compiled output (generated; not committed): `index.js` (plugin hook) + `lib.js` (in-process library)"],
   },
-  commands: SYNC_COMMANDS,
   dependencies: ["core", "plugin-updater"],
   extraSections: [
     {
@@ -68,16 +72,10 @@ Give any \`plugins.json\` entry a \`sync: true\` flag and it is mirrored into th
 });
 
 // When invoked as `node <bundle> <action>` (from a slash-command), run the action
-// and exit before the plugin/hook logic. On a normal load, keep the slash-commands
-// deployed to both apps (idempotent, best-effort).
+// and exit before the plugin/hook logic.
 if (maybeRunReadmeCli("sync-bridge")) process.exit(0);
-if (await maybeRunCli("sync-bridge")) {
+if (await maybeRunCli()) {
   process.exit(0);
-}
-try {
-  deployCommands("sync-bridge", SYNC_COMMANDS);
-} catch {
-  /* best-effort */
 }
 
 // Path for the debounce timestamp; stored in the running app's own config dir so
@@ -130,4 +128,6 @@ export async function activate() {
   return SyncBridgePlugin();
 }
 
-export default SyncBridgePlugin;
+// SyncBridgePlugin and activate stay exported by name, which is what OpenCode and the loader
+// invoke; an api host reads the default instead, so the default is the api plugin.
+export { default } from "./plugin.js";

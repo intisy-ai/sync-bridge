@@ -4,3 +4,6 @@ dist/
 .idea/
 package-lock.json
 .superpowers/
+
+# Generated on the default branch by the release readme job.
+README.md

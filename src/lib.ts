@@ -4,6 +4,11 @@
 // because the host runs every export as a hook). Consumers like plugin-updater
 // load THIS bundle to call the real API without tripping that rule.
 
+import { installCoreRuntime } from "./runtime-core.js";
+
+// A consumer of this bundle runs it with no host, so the engine takes core's runtime.
+installCoreRuntime();
+
 export { syncFile, registerSyncFile, sync, registeredFiles } from "./sync.js";
 export { syncPlugins } from "./pluginsync.js";
 export { syncAll, syncStatus } from "./run.js";

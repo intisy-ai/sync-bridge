@@ -2,14 +2,14 @@
 // A best-effort cross-process lock so two app launches never reconcile the shared
 // home files at the same time. Held for the duration of one sync pass.
 
-import { openSync, closeSync, unlinkSync, statSync, existsSync } from "fs";
+import { openSync, closeSync, unlinkSync, statSync, existsSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
-import { getAppConfigDir, ensureDir } from "@intisy-ai/core";
+import { syncRuntime } from "./runtime.js";
 
 const STALE_MS = 60_000;
 
 function lockPath() {
-  return join(getAppConfigDir(), "config", "sync-bridge.lock");
+  return join(syncRuntime().home(), "config", "sync-bridge.lock");
 }
 
 // Run fn while holding the lock. If another process holds a fresh lock, skip fn
@@ -17,7 +17,7 @@ function lockPath() {
 // holder) and taken over.
 export function withSyncLock(fn) {
   const path = lockPath();
-  ensureDir(dirname(path));
+  mkdirSync(dirname(path), { recursive: true });
   let fd = acquire(path);
   if (fd === null && existsSync(path)) {
     try {
