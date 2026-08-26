@@ -38,13 +38,18 @@
       "debounce_seconds": 0
     }
   },
+  "publish": {
+    "generatedReadme": true
+  },
   "repo": {
-    "role": "Cross-app home reconciliation plugin",
+    "role": "Cross-app config and account sync plugin",
     "category": "plugin",
     "domains": [
       "claude",
       "opencode"
     ],
-    "tech": "typescript"
+    "tech": [
+      "typescript"
+    ]
   }
 }
