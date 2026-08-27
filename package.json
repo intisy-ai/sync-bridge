@@ -1,7 +1,7 @@
 {
   "name": "sync-bridge",
   "version": "0.8.0",
-  "description": "Syncs config and account files between Claude Code and OpenCode homes \u00e2\u20ac\u201d the one plugin allowed to span both app directories",
+  "description": "Syncs config and account files between Claude Code and OpenCode homes â€” the one plugin allowed to span both app directories",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -40,7 +40,7 @@
     "vitest": "^3.2.6"
   },
   "dependencies": {
-    "@intisy-ai/core": "^2.0.0",
-    "@intisy-ai/api": "^1.0.2"
+    "@intisy-ai/api": "^1.0.2",
+    "@intisy-ai/core": "^2.6.0"
   }
 }

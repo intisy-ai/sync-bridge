@@ -1,3 +1,5 @@
+import type { ActivitySpec } from "@intisy-ai/core";
+
 /** One app home this plugin reconciles, and the loader that app is reached through. */
 export interface HomeEntry {
   home: string;
@@ -7,14 +9,7 @@ export interface HomeEntry {
 }
 
 /** What the sync engine reports to the activity ledger. */
-export interface SyncActivity {
-  topic: string;
-  action: string;
-  impact?: string;
-  outcome?: string;
-  subject?: { kind: string; id: string; label: string };
-  details?: Record<string, unknown>;
-}
+export type SyncActivity = Pick<ActivitySpec, "topic" | "action" | "impact" | "outcome" | "subject" | "details">;
 
 /**
  * What the sync engine takes from whoever is running it.
