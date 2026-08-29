@@ -1,5 +1,5 @@
 import type { CrossAppSyncCapability, SettingsCapability, SyncResult } from "@intisy-ai/basekit";
-import type { Plugin, PluginContext } from "@intisy-ai/api";
+import type { Plugin, PluginContext } from "@intisy/bayonet";
 import { addedPluginsOf, changedFilesOf, syncAll } from "./run.js";
 import { existingHomes } from "./homes.js";
 import { SYNC_BRIDGE_SETTINGS } from "./config.js";
