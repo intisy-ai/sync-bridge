@@ -1,4 +1,4 @@
-import type { CrossAppSyncCapability, SettingsCapability, SyncResult } from "@intisy-ai/core";
+import type { CrossAppSyncCapability, SettingsCapability, SyncResult } from "@intisy-ai/basekit";
 import type { Plugin, PluginContext } from "@intisy-ai/api";
 import { addedPluginsOf, changedFilesOf, syncAll } from "./run.js";
 import { existingHomes } from "./homes.js";

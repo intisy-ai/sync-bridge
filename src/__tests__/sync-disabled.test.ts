@@ -7,7 +7,7 @@ import { crossAppSync } from "../plugin.js";
 import { installCoreRuntime } from "../runtime-core.js";
 
 // The engine takes its homes, logging and ledger from whoever runs it; a test runs it as the
-// program half does, so it installs the same core-backed runtime.
+// program half does, so it installs the same basekit-backed runtime.
 installCoreRuntime();
 
 // Its own file on purpose: sync-bridge caches its config on first read, for the life of the

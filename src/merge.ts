@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Merge strategies for synced files: a strategy takes per-home versions ([{ data, mtimeMs }]) and returns the reconciled text. "newest" is the default; "accounts" unions the core-auth store so a login in either app is never lost.
+// Merge strategies for synced files: a strategy takes per-home versions ([{ data, mtimeMs }]) and returns the reconciled text. "newest" is the default; "accounts" unions the basekit auth store so a login in either app is never lost.
 
 export function newest(versions) {
   let best = null;

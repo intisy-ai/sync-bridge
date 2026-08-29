@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveLayout } from "@intisy-ai/core";
+import { resolveLayout } from "@intisy-ai/basekit";
 import { SYNC_BRIDGE_SETTINGS } from "../config.js";
 
 describe("the settings section sync-bridge contributes", () => {

@@ -6,7 +6,7 @@
 
 import { installCoreRuntime } from "./runtime-core.js";
 
-// A consumer of this bundle runs it with no host, so the engine takes core's runtime.
+// A consumer of this bundle runs it with no host, so the engine takes basekit's runtime.
 installCoreRuntime();
 
 export { syncFile, registerSyncFile, sync, registeredFiles } from "./sync.js";

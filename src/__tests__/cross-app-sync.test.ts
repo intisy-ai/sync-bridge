@@ -2,12 +2,12 @@ import { describe, it, expect, afterEach } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { readActivity } from "@intisy-ai/core";
+import { readActivity } from "@intisy-ai/basekit";
 import { crossAppSync } from "../plugin.js";
 import { installCoreRuntime } from "../runtime-core.js";
 
 // The engine takes its homes, logging and ledger from whoever runs it; a test runs it as the
-// program half does, so it installs the same core-backed runtime.
+// program half does, so it installs the same basekit-backed runtime.
 installCoreRuntime();
 
 function tmp(prefix: string): string {
@@ -82,7 +82,7 @@ describe("the entry module's default export", () => {
     expect(provided.slice().sort()).toEqual(manifest.capabilities.slice().sort());
   });
 
-  // The whole point of activating is that the engine stops reading core's registry: it reconciles
+  // The whole point of activating is that the engine stops reading basekit's registry: it reconciles
   // the homes the CONTEXT names. Registering a different pair in apps.json is what makes the
   // assertion decisive rather than accidentally true.
   it("reconciles the homes its context names, not the ones the registry holds", async () => {

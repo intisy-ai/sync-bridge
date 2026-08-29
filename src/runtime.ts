@@ -1,4 +1,4 @@
-import type { ActivitySpec } from "@intisy-ai/core";
+import type { ActivitySpec } from "@intisy-ai/basekit";
 
 /** One app home this plugin reconciles, and the loader that app is reached through. */
 export interface HomeEntry {
@@ -29,8 +29,8 @@ export interface SyncRuntime {
   emit(activity: SyncActivity): void;
 }
 
-// The ids core registers for these topics. Named here because a plugin publishes a topic by id and
-// nothing mints one for it; a rename in core's registry has to be mirrored here.
+// The ids basekit registers for these topics. Named here because a plugin publishes a topic by id and
+// nothing mints one for it; a rename in basekit's registry has to be mirrored here.
 export const SYNC_TOPICS = {
   configChanged: "config.changed",
   syncCompleted: "sync.completed",

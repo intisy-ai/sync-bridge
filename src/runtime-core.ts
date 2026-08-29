@@ -1,7 +1,7 @@
 // The runtime the program half installs: this plugin's CLI, and the library plugin-updater loads,
 // both run with no host, so they take homes, logging and the ledger from core directly.
 import { existsSync } from "fs";
-import { emitEvent, getAppConfigDir, getApps, makeWriteLog, resolveHome } from "@intisy-ai/core";
+import { emitEvent, getAppConfigDir, getApps, makeWriteLog, resolveHome } from "@intisy-ai/basekit";
 import { setSyncRuntime, type HomeEntry, type SyncRuntime } from "./runtime.js";
 
 const NAME = "sync-bridge";

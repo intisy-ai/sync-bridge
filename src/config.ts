@@ -1,12 +1,12 @@
 ﻿// @ts-nocheck
 // sync-bridge config: bespoke multi-home file search; log writing goes to whoever is running this
-// bundle, which is core for the program half and the plugin context for the plugin half.
+// bundle, which is basekit for the program half and the plugin context for the plugin half.
 
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { existingHomes } from "./homes.js";
 import { syncRuntime } from "./runtime.js";
-import type { CapabilitySchema } from "@intisy-ai/core";
+import type { CapabilitySchema } from "@intisy-ai/basekit";
 
 const NAME = "sync-bridge";
 

@@ -5,7 +5,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { getSyncConfig, writeLog } from "./config.js";
-import { defineReadme, maybeRunReadmeCli, getAppConfigDir } from "@intisy-ai/core";
+import { defineReadme, maybeRunReadmeCli, getAppConfigDir } from "@intisy-ai/basekit";
 import { installCoreRuntime } from "./runtime-core.js";
 import { maybeRunCli } from "./commands.js";
 import { syncAll as runSyncAll } from "./run.js";
@@ -16,7 +16,7 @@ installCoreRuntime();
 
 defineReadme({
   description:
-    "Syncs config and account files between the Claude Code and OpenCode home directories. Every other plugin in the ecosystem stays inside the single home of the app it is running in; **sync-bridge is the one component permitted to span both homes**, so an account logged in (or a config changed) in one app is mirrored to the other. It is consumed two ways: as its own **plugin hook** (reconciles configured files on load — by default the core-auth account store), and as an **in-process library** (`dist/lib.js`) that [plugin-updater](https://github.com/intisy-ai/plugin-updater) loads to run `syncPlugins()`, mirroring `plugins.json` entries flagged `sync: true` into the other app.\n\nEach home is resolved by precedence (Claude prefers `~/.claude`; OpenCode prefers `~/.config/opencode`), overridable via `HUB_CLAUDE_DIR` / `HUB_OPENCODE_DIR`. A relative path (e.g. `config/accounts.json`) is read from every existing home, reconciled by a merge strategy, and written back atomically to all homes. The `accounts` strategy unions the core-auth account store by account id so no login is ever lost; `newest` copies the most-recently-modified version.",
+    "Syncs config and account files between the Claude Code and OpenCode home directories. Every other plugin in the ecosystem stays inside the single home of the app it is running in; **sync-bridge is the one component permitted to span both homes**, so an account logged in (or a config changed) in one app is mirrored to the other. It is consumed two ways: as its own **plugin hook** (reconciles configured files on load — by default the basekit auth account store), and as an **in-process library** (`dist/lib.js`) that [plugin-updater](https://github.com/intisy-ai/plugin-updater) loads to run `syncPlugins()`, mirroring `plugins.json` entries flagged `sync: true` into the other app.\n\nEach home is resolved by precedence (Claude prefers `~/.claude`; OpenCode prefers `~/.config/opencode`), overridable via `HUB_CLAUDE_DIR` / `HUB_OPENCODE_DIR`. A relative path (e.g. `config/accounts.json`) is read from every existing home, reconciled by a merge strategy, and written back atomically to all homes. The `accounts` strategy unions the basekit auth account store by account id so no login is ever lost; `newest` copies the most-recently-modified version.",
   architecture: `flowchart TD
     subgraph Homes
         CLAUDE["Claude home<br/>~/.claude → ~/.config/claude"]
@@ -42,7 +42,7 @@ defineReadme({
     ],
     dist: ["Compiled output (generated; not committed): `index.js` (plugin hook) + `lib.js` (in-process library)"],
   },
-  dependencies: ["core", "plugin-updater"],
+  dependencies: ["basekit", "plugin-updater"],
   extraSections: [
     {
       id: "api",
